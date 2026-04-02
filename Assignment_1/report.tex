@@ -1,102 +1,169 @@
 \documentclass[12pt, a4paper]{article}
-% --- Essential Packages ---
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{setspace}
 \usepackage{graphicx}
 \usepackage{float}
-\usepackage{geometry}
-\geometry{a4paper, margin=1in}
-\usepackage{setspace} 
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
 \usepackage{xcolor}
 \usepackage{hyperref}
-\onehalfspacing
-% --- Typography: Modern & Minimal ---
 \usepackage{charter}
 \usepackage{microtype}
-% --- Section Styling ---
 \usepackage{titlesec}
+
+\geometry{a4paper, margin=1in}
+\onehalfspacing
+
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}[\titlerule]
 \titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
-% --- Math & Code ---
-\usepackage{amsmath, amssymb}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage{matlab-prettifier}
-% --- Table & Color Styling ---
-\usepackage[table]{xcolor}
-\definecolor{lightgray}{gray}{0.95}
-\definecolor{linkblue}{RGB}{0, 50, 120}
-\definecolor{headerblue}{RGB}{220,230,242}
-% --- Links & Bibliography ---
-\usepackage[colorlinks=true, allcolors=linkblue]{hyperref}
-\usepackage[style=numeric,sorting=none]{biblatex}
-\addbibresource{references.bib}
-% --- Refined Matlab Style ---
-\lstset{
-    language=Matlab,
-    style=Matlab-editor,
-    basicstyle=\footnotesize\ttfamily,
-    commentstyle=\color{green!50!black},
-    keywordstyle=\color{blue},
-    stringstyle=\color{red},
-    breaklines=true,
-    frame=single,
-    columns=fullflexible,
-    numbers=left}
-% --- List of Abbreviations ---
-\usepackage{nomencl}
-\makenomenclature
+
 \begin{document}
-% ============================================================
-%  TITLE PAGE
-% ============================================================
+
 \begin{titlepage}
     \centering
     \vfill
-    
-    \includegraphics[width=0.25\textwidth]{cu_logo.png}
+
+    \IfFileExists{cu_logo.png}{\includegraphics[width=0.22\textwidth]{cu_logo.png}}{}
     \hfill
-    \includegraphics[width=0.3\textwidth]{cufe_logo.png}
-    
+    \IfFileExists{cufe_logo.png}{\includegraphics[width=0.27\textwidth]{cufe_logo.png}}{}
+
     \vfill
     {\Large \textbf{Department of Electronics and Communications Engineering}}\\[0.5cm]
-    \vspace{1cm}
-    {\Huge \textbf{Neural Networks}}\\[0.5cm]
-    \vspace{2cm}
-    % {\Huge \textbf{Assignment \#2}}\\[0.6cm]
-    {\Large \textbf{Assignment \#1}}\\[0.5cm]
-    \vspace{1cm}
-    \vfill
-    \textbf{\large Submitted By:}\\[0.5cm]
+    {\Huge \textbf{Neural Networks}}\\[0.8cm]
+    {\Large \textbf{Assignment \#1 Report}}\\[1.5cm]
+
+    \textbf{Submitted By:}\\[0.3cm]
     \begin{center}
-    \renewcommand{\arraystretch}{1.5}
-    \rowcolors{2}{gray!15}{white}
+    \renewcommand{\arraystretch}{1.35}
+    \rowcolors{2}{gray!12}{white}
     \begin{tabular}{|c|c|}
     \hline
-    \rowcolor{gray!30} \textbf{Name} & \textbf{Student ID} \\ \hline
-    Abdallah Essam Mohamed Mahmoud El-Sakka    & 9220479 \\ \hline
+    \rowcolor{gray!25} \textbf{Name} & \textbf{Student ID} \\\hline
+    Abdallah Essam Mohamed Mahmoud El-Sakka & 9220479 \\\hline
     \end{tabular}
     \end{center}
+
     \vfill
-    \textbf{Submitted To:}\\
-    Prof. Mohsen Rashwan\\[1cm]
-    \textbf{Submission Date:}\\
-    April 4, 2026
-    \vspace{1cm}
+    \textbf{Submitted To:} Prof. Mohsen Rashwan\\[0.4cm]
+    \textbf{Submission Date:} April 4, 2026
+    \vfill
 \end{titlepage}
-% ============================================================
-%  FRONT MATTER
-% ============================================================
-\newpage
+
 \tableofcontents
 \newpage
-% \listoffigures
-% \newpage
-% ============================================================
-%  MAIN CONTENT
-% ============================================================
+
 \section{Part 1}
+Part 1 is documented separately.
 
+\section{Part 2: Classical ML Modeling}
 
+\subsection{Problem Summary and Required Tasks}
+ReducedMNIST is used with 10 classes (digits 0--9), where the training split has 1000 samples per class and the testing split has 200 samples per class.
+
+The required tasks are:
+\begin{enumerate}
+    \item Extract three feature families for train and test sets:
+    \begin{itemize}
+        \item DCT with 225 dimensions,
+        \item PCA with cumulative variance at least 95\%,
+        \item HOG features.
+    \end{itemize}
+    \item Train and evaluate:
+    \begin{itemize}
+        \item K-means per class with \(K = 1, 4, 16, 32\),
+        \item SVM with linear and nonlinear kernels.
+    \end{itemize}
+    \item Report comparative accuracy and processing time in one final table.
+    \item Show confusion matrices only for the best K-means result and the best SVM result.
+    \item Add conclusions.
+\end{enumerate}
+
+\subsection{Implementation Flow}
+The implemented flow in Part\_2 scripts is:
+\begin{enumerate}
+    \item Load ReducedMNIST (JPG folder dataset via KaggleHub, with safe fallbacks).
+    \item Normalize pixel values to \([0,1]\).
+    \item Extract DCT, PCA, and HOG features.
+    \item Train K-means per class for \(K \in \{1,4,16,32\}\) and evaluate on test data.
+    \item Train SVM with linear and RBF kernels and evaluate on test data.
+    \item Store predictions, measure real elapsed time, and print summary tables.
+    \item Visualize confusion matrices and comparative charts.
+\end{enumerate}
+
+\subsection{Nonlinear SVM Used (RBF) and Its Specifications}
+The nonlinear SVM used in this implementation is the \textbf{RBF kernel} SVM with:
+\begin{itemize}
+    \item Kernel: \texttt{rbf}
+    \item \(C = 10.0\)
+    \item \(\gamma = \texttt{scale}\)
+    \item Multi-class strategy: one-vs-one (scikit-learn \texttt{SVC})
+\end{itemize}
+
+The RBF kernel is:
+\[
+K(\mathbf{x},\mathbf{z}) = \exp\left(-\gamma\lVert \mathbf{x}-\mathbf{z} \rVert^2\right)
+\]
+It allows nonlinear decision boundaries by mapping data to a higher-dimensional implicit space. This is useful for digit data where class separation is not perfectly linear.
+
+\subsection{Comparative Results (Accuracy and Processing Time)}
+Table~\ref{tab:part2_results} summarizes all required combinations with measured real elapsed time.
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{l|cc|cc|cc}
+\toprule
+\textbf{Classifier} & \multicolumn{2}{c|}{\textbf{DCT}} & \multicolumn{2}{c|}{\textbf{PCA}} & \multicolumn{2}{c}{\textbf{HOG}} \\
+ & Acc. (\%) & Time (s) & Acc. (\%) & Time (s) & Acc. (\%) & Time (s) \\
+\midrule
+K-means \(K=1\)  & 86.85 & 0.01 & 86.80 & 0.00 & 91.35 & 0.04 \\
+K-means \(K=4\)  & 92.65 & 2.19 & 92.30 & 0.61 & 93.60 & 8.00 \\
+K-means \(K=16\) & 94.85 & 1.50 & 94.80 & 1.51 & 95.00 & 17.85 \\
+K-means \(K=32\) & 96.15 & 2.05 & 95.70 & 2.14 & 96.00 & 29.79 \\
+SVM Linear         & 92.60 & 1.78 & 90.65 & 2.66 & 96.70 & 10.80 \\
+SVM Nonlinear (RBF, \(C=10\), \(\gamma=\)scale) & 96.90 & 5.05 & 95.40 & 12.54 & 96.70 & 31.02 \\
+\bottomrule
+\end{tabular}
+\caption{Part 2 required comparative table: accuracy and processing time.}
+\label{tab:part2_results}
+\end{table}
+
+\subsection{Best Results and Confusion Matrices}
+Best K-means result: \textbf{K-means \(K=32\) with DCT} (96.15\%).\\
+Best SVM result: \textbf{SVM Nonlinear (RBF) with DCT} (96.90\%).
+
+\begin{figure}[H]
+\centering
+\IfFileExists{Part_2/figures/cm_kmeans_best.png}{
+    \includegraphics[width=0.62\textwidth]{Part_2/figures/cm_kmeans_best.png}
+}{
+    \fbox{\parbox{0.85\textwidth}{Insert confusion matrix image for best K-means result here (K=32 with DCT).}}
+}
+\caption{Confusion matrix for the best K-means model.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{Part_2/figures/cm_svm_best.png}{
+    \includegraphics[width=0.62\textwidth]{Part_2/figures/cm_svm_best.png}
+}{
+    \fbox{\parbox{0.85\textwidth}{Insert confusion matrix image for best SVM result here (RBF with DCT).}}
+}
+\caption{Confusion matrix for the best SVM model.}
+\end{figure}
+
+\subsection{Conclusions}
+\begin{enumerate}
+    \item Increasing \(K\) in class-wise K-means consistently improves performance, with best result at \(K=32\).
+    \item Nonlinear SVM (RBF) gives the highest overall accuracy among all tested combinations.
+    \item HOG is competitive, especially for linear SVM, but incurs higher runtime.
+    \item DCT features produced the strongest best-case accuracy for both classifier families in this run.
+    \item Reporting both accuracy and elapsed time is important because the best-accuracy model is not always the fastest one.
+\end{enumerate}
 
 \end{document}

@@ -1,106 +1,104 @@
-#================================================================
-# ASSIGNMENT 1 - PART 2: COMPLETE EXPERIMENT RUNNER
-# Run this file directly: python run_all_experiments.py
-# ================================================================
+"""
+Assignment 1 - Part 2: Experiment Runner
+Author: Antar
+Description: Run feature extraction, K-Means, and SVM experiments.
+"""
+
+import time
 
 import numpy as np
-import time
 from sklearn.metrics import accuracy_score
 
 from step0_load_data import load_data
-from step1_features import (
-    extract_dct_features,
-    extract_pca_features,
-    extract_hog_features,
-)
-from step2_kmeans import train_kmeans_classifier, predict_kmeans
+from step1_features import extract_dct_features, extract_hog_features, extract_pca_features
+from step2_kmeans import predict_kmeans, train_kmeans_classifier
 from step3_svm import train_and_test_svm
 
-# ---- SETUP ----
-np.random.seed(42)
 
-# Load data (replace with your actual loading method)
-train_images, train_labels, test_images, test_labels = load_data(
-    prefer_mat=False,
-    use_kagglehub=True,
-)
+FEATURES = ('DCT', 'PCA', 'HOG')
+CLASSIFIERS = ('KMeans_K1', 'KMeans_K4', 'KMeans_K16', 'KMeans_K32', 'SVM_linear', 'SVM_rbf')
 
-# ---- EXTRACT FEATURES ----
-print("=== Extracting all features ===")
-dct_train  = extract_dct_features(train_images)
-dct_test   = extract_dct_features(test_images)
-pca_train, pca_test, K_pca = extract_pca_features(train_images, test_images)
-hog_train  = extract_hog_features(train_images)
-hog_test   = extract_hog_features(test_images)
 
-# Bundle features for easy iteration
-feature_sets = {
-    'DCT': (dct_train,  dct_test),
-    'PCA': (pca_train,  pca_test),
-    'HOG': (hog_train,  hog_test),
-}
+def _print_section(title):
+    line = '=' * 78
+    print(f"\n{line}\n{title}\n{line}")
 
-# Storage for the results table
-results = {}  # key: (classifier_name, feature_name) → (accuracy, time)
-all_preds = {}  # store predictions for confusion matrices
 
-# ================================================================
-# K-MEANS EXPERIMENTS
-# ================================================================
-print("\n\n=== K-Means Experiments ===")
+def _print_result_line(classifier, feature_name, acc, elapsed):
+    print(f"{classifier:<12} | {feature_name:<3} | Accuracy: {acc*100:6.2f}% | Time: {elapsed:7.2f}s")
 
-for K in [1, 4, 16, 32]:
-    for fname, (tr_feat, te_feat) in feature_sets.items():
-        print(f"\n-- {fname} features, K={K} per class --")
 
-        t_start = time.time()
+def _print_summary(results):
+    _print_section('RESULTS SUMMARY (REAL ELAPSED TIME)')
+    print(f"{'Classifier':<12} | {'Feature':<3} | {'Accuracy':>10} | {'Time (s)':>8}")
+    print('-' * 56)
 
-        # Train: compute centroids per class
-        centroids, c_labels = train_kmeans_classifier(tr_feat, train_labels, K)
+    for classifier in CLASSIFIERS:
+        for feature_name in FEATURES:
+            acc, elapsed = results.get((classifier, feature_name), (0.0, 0.0))
+            print(f"{classifier:<12} | {feature_name:<3} | {acc*100:9.2f}% | {elapsed:8.2f}")
 
-        # Test: classify using nearest centroid
-        preds = predict_kmeans(te_feat, centroids, c_labels)
 
-        elapsed = time.time() - t_start
-        acc     = accuracy_score(test_labels, preds)
+def run_experiments():
+    np.random.seed(42)
 
-        print(f"  Accuracy: {acc*100:.2f}%  |  Time: {elapsed:.1f}s")
+    train_images, train_labels, test_images, test_labels = load_data(
+        prefer_mat=False,
+        use_kagglehub=True,
+    )
 
-        key = f"KMeans_K{K}"
-        results[(key, fname)] = (acc, elapsed)
-        all_preds[(key, fname)] = preds
+    _print_section('FEATURE EXTRACTION')
+    dct_train = extract_dct_features(train_images)
+    dct_test = extract_dct_features(test_images)
+    pca_train, pca_test, _ = extract_pca_features(train_images, test_images)
+    hog_train = extract_hog_features(train_images)
+    hog_test = extract_hog_features(test_images)
 
-# ================================================================
-# SVM EXPERIMENTS
-# ================================================================
-print("\n\n=== SVM Experiments ===")
+    feature_sets = {
+        'DCT': (dct_train, dct_test),
+        'PCA': (pca_train, pca_test),
+        'HOG': (hog_train, hog_test),
+    }
 
-for kernel in ['linear', 'rbf']:
-    for fname, (tr_feat, te_feat) in feature_sets.items():
-        print(f"\n-- {fname} features, SVM {kernel} kernel --")
+    results = {}
+    all_preds = {}
 
-        t_start = time.time()
-        _, acc, preds, __ = train_and_test_svm(tr_feat, train_labels,
-                                                  te_feat, test_labels, kernel)
-        elapsed = time.time() - t_start
+    _print_section('K-MEANS EXPERIMENTS')
+    for k in (1, 4, 16, 32):
+        classifier_name = f'KMeans_K{k}'
+        for feature_name, (tr_feat, te_feat) in feature_sets.items():
+            t_start = time.time()
+            centroids, c_labels = train_kmeans_classifier(tr_feat, train_labels, k)
+            preds = predict_kmeans(te_feat, centroids, c_labels)
+            elapsed = time.time() - t_start
+            acc = accuracy_score(test_labels, preds)
 
-        key = f"SVM_{kernel}"
-        results[(key, fname)] = (acc, elapsed)
-        all_preds[(key, fname)] = preds
+            results[(classifier_name, feature_name)] = (acc, elapsed)
+            all_preds[(classifier_name, feature_name)] = preds
+            _print_result_line(classifier_name, feature_name, acc, elapsed)
 
-# ================================================================
-# PRINT RESULTS TABLE
-# ================================================================
-print("\n\n" + "="*60)
-print("                RESULTS SUMMARY")
-print("="*60)
-print(f"{'Classifier':<22} {'DCT':>8} {'PCA':>8} {'HOG':>8}")
-print("-"*50)
+    _print_section('SVM EXPERIMENTS')
+    for kernel in ('linear', 'rbf'):
+        classifier_name = f'SVM_{kernel}'
+        for feature_name, (tr_feat, te_feat) in feature_sets.items():
+            t_start = time.time()
+            _, acc, preds, _ = train_and_test_svm(
+                tr_feat,
+                train_labels,
+                te_feat,
+                test_labels,
+                kernel,
+                verbose=False,
+            )
+            elapsed = time.time() - t_start
 
-for clf in ['KMeans_K1', 'KMeans_K4', 'KMeans_K16', 'KMeans_K32',
-              'SVM_linear', 'SVM_rbf']:
-    row = f"{clf:<22}"
-    for ft in ['DCT', 'PCA', 'HOG']:
-        acc, _ = results.get((clf, ft), (0, 0))
-        row += f" {acc*100:>7.2f}%"
-    print(row)
+            results[(classifier_name, feature_name)] = (acc, elapsed)
+            all_preds[(classifier_name, feature_name)] = preds
+            _print_result_line(classifier_name, feature_name, acc, elapsed)
+
+    _print_summary(results)
+    return results, all_preds, test_labels
+
+
+if __name__ == '__main__':
+    run_experiments()
