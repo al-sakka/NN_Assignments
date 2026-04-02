@@ -1,0 +1,102 @@
+\documentclass[12pt, a4paper]{article}
+% --- Essential Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{setspace} 
+\usepackage{xcolor}
+\usepackage{hyperref}
+\onehalfspacing
+% --- Typography: Modern & Minimal ---
+\usepackage{charter}
+\usepackage{microtype}
+% --- Section Styling ---
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+% --- Math & Code ---
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{matlab-prettifier}
+% --- Table & Color Styling ---
+\usepackage[table]{xcolor}
+\definecolor{lightgray}{gray}{0.95}
+\definecolor{linkblue}{RGB}{0, 50, 120}
+\definecolor{headerblue}{RGB}{220,230,242}
+% --- Links & Bibliography ---
+\usepackage[colorlinks=true, allcolors=linkblue]{hyperref}
+\usepackage[style=numeric,sorting=none]{biblatex}
+\addbibresource{references.bib}
+% --- Refined Matlab Style ---
+\lstset{
+    language=Matlab,
+    style=Matlab-editor,
+    basicstyle=\footnotesize\ttfamily,
+    commentstyle=\color{green!50!black},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    breaklines=true,
+    frame=single,
+    columns=fullflexible,
+    numbers=left}
+% --- List of Abbreviations ---
+\usepackage{nomencl}
+\makenomenclature
+\begin{document}
+% ============================================================
+%  TITLE PAGE
+% ============================================================
+\begin{titlepage}
+    \centering
+    \vfill
+    
+    \includegraphics[width=0.25\textwidth]{cu_logo.png}
+    \hfill
+    \includegraphics[width=0.3\textwidth]{cufe_logo.png}
+    
+    \vfill
+    {\Large \textbf{Department of Electronics and Communications Engineering}}\\[0.5cm]
+    \vspace{1cm}
+    {\Huge \textbf{Neural Networks}}\\[0.5cm]
+    \vspace{2cm}
+    % {\Huge \textbf{Assignment \#2}}\\[0.6cm]
+    {\Large \textbf{Assignment \#1}}\\[0.5cm]
+    \vspace{1cm}
+    \vfill
+    \textbf{\large Submitted By:}\\[0.5cm]
+    \begin{center}
+    \renewcommand{\arraystretch}{1.5}
+    \rowcolors{2}{gray!15}{white}
+    \begin{tabular}{|c|c|}
+    \hline
+    \rowcolor{gray!30} \textbf{Name} & \textbf{Student ID} \\ \hline
+    Abdallah Essam Mohamed Mahmoud El-Sakka    & 9220479 \\ \hline
+    \end{tabular}
+    \end{center}
+    \vfill
+    \textbf{Submitted To:}\\
+    Prof. Mohsen Rashwan\\[1cm]
+    \textbf{Submission Date:}\\
+    April 4, 2026
+    \vspace{1cm}
+\end{titlepage}
+% ============================================================
+%  FRONT MATTER
+% ============================================================
+\newpage
+\tableofcontents
+\newpage
+% \listoffigures
+% \newpage
+% ============================================================
+%  MAIN CONTENT
+% ============================================================
+\section{Part 1}
+
+
+
+\end{document}
