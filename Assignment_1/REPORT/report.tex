@@ -23,35 +23,71 @@
 
 \begin{document}
 
+% ==========================================
+% TITLE PAGE (No Border)
+% ==========================================
 \begin{titlepage}
     \centering
-    \vfill
-
-    \IfFileExists{cu_logo.png}{\includegraphics[width=0.22\textwidth]{cu_logo.png}}{}
+    
+    % --- Logos and Header ---
+    \begin{minipage}[c]{0.2\textwidth}
+        \begin{flushleft}
+            \includegraphics[width=2.5cm]{Picture1.png} 
+        \end{flushleft}
+    \end{minipage}%
     \hfill
-    \IfFileExists{cufe_logo.png}{\includegraphics[width=0.27\textwidth]{cufe_logo.png}}{}
+    \begin{minipage}[c]{0.5\textwidth}
+        \centering
+        \setstretch{1.1}
+        {\large \textbf{Cairo University}} \\
+        {\large Faculty of Engineering} \\
+        {\large Electronics \& Communications Dept.}
+    \end{minipage}%
+    \hfill
+    \begin{minipage}[c]{0.2\textwidth}
+        \begin{flushright}
+            \includegraphics[width=2.5cm]{Picture2.jpg} 
+        \end{flushright}
+    \end{minipage}
+
+    \vspace{2.5cm}
+
+    % --- Main Title ---
+    \rule{\linewidth}{0.8mm} \\[0.5cm]
+    {\color{NTRA_Blue} \huge \bfseries NN ASSINGMENT 1} \\[0.4cm]
+    {\color{NTRA_Blue} \large ...} \\
+    \rule{\linewidth}{0.8mm} \\[1.5cm]
+
+    % \vspace{0.5cm}
+    % {\large Submitted for:} \\
+    % {\textbf{Dr. Mohsen Ra}}
 
     \vfill
-    {\Large \textbf{Department of Electronics and Communications Engineering}}\\[0.5cm]
-    {\Huge \textbf{Neural Networks}}\\[0.8cm]
-    {\Large \textbf{Assignment \#1 Report}}\\[1.5cm]
 
-    \textbf{Submitted By:}\\[0.3cm]
+    % --- Team and Professor Info ---
     \begin{center}
-    \renewcommand{\arraystretch}{1.35}
-    \rowcolors{2}{gray!12}{white}
-    \begin{tabular}{|c|c|}
-    \hline
-    \rowcolor{gray!25} \textbf{Name} & \textbf{Student ID} \\\hline
-    Abdallah Essam Mohamed Mahmoud El-Sakka & 9220479 \\\hline
-    \end{tabular}
+        \setstretch{1.5}
+        \textbf{Prepared by:} \\[0.3cm]
+        \begin{tabular}{l r}
+        \textbf{Abdallah Essam Mohamed Mahmoud} & \hspace{1cm} ID: ... \\
+            \textbf{Zeyad Antar Othman Abu-Zaid} & \hspace{1cm} ID: 9220331 \\
+            \textbf{Abdelrahman Hatem} & \hspace{1cm} ID: ... \\            
+            \end{tabular}
+
+        \vspace{1cm}
+
+        \textbf{Submitted to:} \\
+        \textbf{Dr. Fadel Dighm} \\
     \end{center}
 
     \vfill
-    \textbf{Submitted To:} Prof. Mohsen Rashwan\\[0.4cm]
-    \textbf{Submission Date:} April 4, 2026
-    \vfill
+    \rule{0.3\linewidth}{0.2mm} \\
+    {\large February 2026}
 \end{titlepage}
+
+% --- ACTIVATE BORDER AFTER TITLE PAGE ---
+\AddToShipoutPictureFG{\MyPageBorder} 
+
 
 \tableofcontents
 \newpage
