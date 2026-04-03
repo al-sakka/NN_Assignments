@@ -23,6 +23,7 @@
 \providecommand{\AddToShipoutPictureFG}[1]{}
 
 \geometry{a4paper, margin=1in}
+\graphicspath{{./}{../}}
 \onehalfspacing
 
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}[\titlerule]
@@ -78,18 +79,19 @@
         \begin{tabular}{l r}
         \textbf{Abdallah Essam Mohamed Mahmoud} & \hspace{1cm} ID: ... \\
             \textbf{Zeyad Antar Othman Abu-Zaid} & \hspace{1cm} ID: 9220331 \\
-            \textbf{Abdelrahman Hatem} & \hspace{1cm} ID: ... \\            
+            \textbf{Abdelrahman Hatem Nasr Youssef} & \hspace{1cm} ID: 9220461 \\            
             \end{tabular}
 
         \vspace{1cm}
 
         \textbf{Submitted to:} \\
-        \textbf{Dr. Fadel Dighm} \\
+        \textbf{Prof.\ Dr.\ Mohsen Rashwan} \\
+        \textbf{Dr.\ Mohamed Abdelghani} \\
     \end{center}
 
     \vfill
     \rule{0.3\linewidth}{0.2mm} \\
-    {\large February 2026}
+    {\large March 2026}
 \end{titlepage}
 
 % --- ACTIVATE BORDER AFTER TITLE PAGE ---
@@ -97,10 +99,570 @@
 
 
 \tableofcontents
+\listoffigures
 \newpage
 
-\section{Part 1}
-Part 1 is documented separately.
+\section{Part 1: Regression Problems}
+
+\subsection{Problem Summary and Required Tasks}
+In this part we apply polynomial regression to two real-world datasets and study how outliers affect model performance.
+
+\textbf{Problem 1 --- Insurance Data.}  The number of insured persons is recorded for the years 1987--1996.  We are required to:
+\begin{enumerate}
+    \item Fit linear, quadratic, and cubic polynomials and compare $R^2$ values to determine the best-fit model.
+    \item Perform hand analysis (Normal Equation) for the linear case.
+    \item Detect and remove outliers, then refit and compare results.
+    \item Graph the best-fit function together with the scatter plot.
+    \item Predict the average number of insured persons in 1997.
+\end{enumerate}
+
+\textbf{Problem 2 --- Heating Oil.}  Oil consumption data is given with two features (temperature, insulation).  We are required to:
+\begin{enumerate}
+    \item Fit linear and quadratic models and compare $R^2$ values.
+    \item Detect and remove outliers using the Mahalanobis distance, then refit and compare.
+    \item Predict oil usage for a temperature of 15\textdegree F and insulation of 5~inches.
+\end{enumerate}
+
+\subsection{Implementation Flow}
+The following steps are performed for both problems:
+\begin{enumerate}
+    \item Load the dataset and define the feature variables.
+    \item Fit polynomial regression models using the Normal Equation.
+    \item Evaluate each model by computing $R^2$ and comparing fits.
+    \item Detect outliers (Z-score for univariate data, Mahalanobis distance for multivariate data).
+    \item Remove the identified outlier and refit all models on the cleaned data.
+    \item Compare performance before and after outlier removal.
+    \item Use the best-fit model to make predictions on unseen inputs.
+    \item Generate all relevant plots (scatter, overlay, surface, prediction).
+\end{enumerate}
+
+\subsection{Problem 1 --- Insurance Data Polynomial Regression}
+
+The numbers of insured persons $y$ with an insurance company for the years 1987 to 1996 are shown in the table below.  We let $x$ denote the number of years since 1987 (i.e.\ $x=0$ for 1987, $x=9$ for 1996).
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|cccccccccc}
+\toprule
+Year & 1987 & 1988 & 1989 & 1990 & 1991 & 1992 & 1993 & 1994 & 1995 & 1996 \\
+$x$  &  0   &  1   &  2   &  3   &  4   &  5   &  6   &  7   &  8   &  9   \\
+\midrule
+$y$  & 12400 & 10900 & 10000 & 1050 & 9500 & 8900 & 8000 & 7800 & 7600 & 7200 \\
+\bottomrule
+\end{tabular}
+\caption{Insurance data.}
+\label{tab:p1_data}
+\end{table}
+
+% ---- SCATTER PLOT ----
+\subsubsection{(a.1) Scatter Plot}
+
+The data is plotted in a 2-D scatter plot to visualise the overall trend.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p1_scatter.png}{
+    \includegraphics[width=0.6\textwidth]{../Part_1/figures/p1_scatter.png}
+}{
+    \fbox{\parbox{0.55\textwidth}{\centering Insert scatter plot here.}}
+}
+\caption{Scatter plot of the insurance data.}
+\end{figure}
+
+\noindent\textbf{Comment.}
+As shown in the figure above, the number of insured persons generally decreases over the years.  However, in 1990 ($x=3$) the recorded value drops to 1\,050 --- far below the neighbouring values --- which strongly suggests a data-entry error.  This point will likely distort any regression model and should be treated as an outlier.
+
+% ---- HAND ANALYSIS ----
+\subsubsection{(a.2) Hand Analysis --- Linear Fit (on cleaned data)}
+
+We first carry out the linear regression \emph{by hand} using the Normal Equation.  The outlier at $x=3$ is removed first, leaving $n=9$ data points with $x \in \{0,1,2,4,5,6,7,8,9\}$.
+
+The linear model is $y = \theta_0 + \theta_1 x$.  The design matrix and target vector are:
+\[
+\mathbf{X} =
+\begin{pmatrix}
+1 & 0 \\
+1 & 1 \\
+1 & 2 \\
+1 & 4 \\
+1 & 5 \\
+1 & 6 \\
+1 & 7 \\
+1 & 8 \\
+1 & 9
+\end{pmatrix}
+, \qquad
+\mathbf{y} =
+\begin{pmatrix}
+12400 \\ 10900 \\ 10000 \\ 9500 \\ 8900 \\ 8000 \\ 7800 \\ 7600 \\ 7200
+\end{pmatrix}
+\]
+
+\textbf{Step 1 --- Compute} $\mathbf{X}^T \mathbf{X}$:
+\[
+\mathbf{X}^T \mathbf{X} =
+\begin{pmatrix}
+\sum 1 & \sum x_i \\
+\sum x_i & \sum x_i^2
+\end{pmatrix}
+=
+\begin{pmatrix}
+9 & 42 \\
+42 & 276
+\end{pmatrix}
+\]
+
+\textbf{Step 2 --- Compute the inverse} $(\mathbf{X}^T \mathbf{X})^{-1}$:
+\[
+\det = 9 \times 276 - 42 \times 42 = 2484 - 1764 = 720
+\]
+\[
+(\mathbf{X}^T \mathbf{X})^{-1} =
+\frac{1}{720}
+\begin{pmatrix}
+276 & -42 \\
+-42 & 9
+\end{pmatrix}
+=
+\begin{pmatrix}
+0.3833 & -0.0583 \\
+-0.0583 & 0.0125
+\end{pmatrix}
+\]
+
+\textbf{Step 3 --- Compute} $\mathbf{X}^T \mathbf{y}$:
+\[
+\mathbf{X}^T \mathbf{y} =
+\begin{pmatrix}
+\sum y_i \\
+\sum x_i y_i
+\end{pmatrix}
+=
+\begin{pmatrix}
+82\,300 \\
+341\,600
+\end{pmatrix}
+\]
+
+\textbf{Step 4 --- Solve for} $\boldsymbol{\theta}$:
+\[
+\boldsymbol{\theta} =
+(\mathbf{X}^T \mathbf{X})^{-1}\,\mathbf{X}^T \mathbf{y}
+=
+\begin{pmatrix}
+0.3833 & -0.0583 \\
+-0.0583 & 0.0125
+\end{pmatrix}
+\begin{pmatrix}
+82\,300 \\
+341\,600
+\end{pmatrix}
+=
+\begin{pmatrix}
+11\,621.6667 \\
+-530.8333
+\end{pmatrix}
+\]
+
+Thus the hand-calculated linear equation is:
+\[
+\boxed{y = -530.83\,x + 11\,621.67}
+\]
+
+\textbf{Step 5 --- Compute} $R^2$:
+\[
+SS_{\text{res}} = \sum (y_i - \hat{y}_i)^2 = 1\,339\,500.00
+\qquad
+SS_{\text{tot}} = \sum (y_i - \bar{y})^2 = 23\,882\,222.22
+\]
+\[
+R^2 = 1 - \frac{SS_{\text{res}}}{SS_{\text{tot}}} = 1 - \frac{1\,339\,500}{23\,882\,222} = \boxed{0.9439}
+\]
+
+\noindent\textbf{Comment.}
+The hand-calculated results agree perfectly with the values produced by our Python code, which confirms the correctness of both approaches.  The linear model already captures about 94\% of the variance in the cleaned data, indicating a strong linear trend.
+
+% ---- FITTED DATA (WITH OUTLIER) ----
+\subsubsection{(a.3) Polynomial Fitting --- With Outlier}
+
+We aim to fit polynomial models (linear, quadratic, cubic) to the given data points.  The general form is
+\[
+y = a_n x^n + a_{n-1} x^{n-1} + \cdots + a_1 x + a_0
+\]
+where $\hat{y}$ is the predicted value.  The parameters $\boldsymbol{\theta}$ are estimated using the Normal Equation:
+\[
+\boldsymbol{\theta} = \bigl(\mathbf{X}^T \mathbf{X}\bigr)^{-1} \mathbf{X}^T \mathbf{y}
+\]
+where $\mathbf{X}$ is the design matrix (expanded with polynomial terms of $x$), and $\mathbf{y}$ is the vector of observed outputs.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p1_overlay_with_outlier.png}{
+    \includegraphics[width=0.65\textwidth]{../Part_1/figures/p1_overlay_with_outlier.png}
+}{
+    \fbox{\parbox{0.6\textwidth}{\centering Insert overlay plot with outlier.}}
+}
+\caption{Overlay of linear, quadratic, and cubic fits (with outlier).}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|c|c}
+\toprule
+\textbf{Degree} & $R^2$ & \textbf{\% increase from previous} \\
+\midrule
+Linear ($n=1$)    & 0.1345 & --- \\
+Quadratic ($n=2$) & 0.2534 & 88.3\% \\
+Cubic ($n=3$)     & 0.3829 & 51.1\% \\
+\bottomrule
+\end{tabular}
+\caption{$R^2$ comparison with outlier present.}
+\label{tab:p1_r2_with_outlier}
+\end{table}
+
+\noindent\textbf{Comment.}
+With the outlier still included, all three models struggle to explain the data --- the best $R^2$ is only 0.3829 for the cubic fit.  The large percentage increase from linear to quadratic (88.3\%) suggests that some curvature helps, but overall the outlier is pulling every model away from the true trend.  This is a clear sign that the suspicious data point at $x=3$ needs to be addressed before drawing conclusions.
+
+% ---- OUTLIER REMOVAL ----
+\subsubsection{(b) Outlier Detection and Removal}
+
+From the scatter plot, the value at $x=3$ ($y=1050$) stands out immediately.  To verify this quantitatively, we compute the mean $\bar{y}$ and standard deviation $s$ of all 10 observations, then calculate the standardised score for each point:
+\[
+Z_i = \frac{y_i - \bar{y}}{s}
+\]
+Any observation whose $|Z|$ exceeds 2 is considered statistically anomalous.
+
+Running this calculation, the point at $x=3$ receives $Z=-2.65$, while every other observation stays within $|Z|<1.3$.  This single extreme score confirms what the plot already suggested: the 1990 reading is a genuine outlier and should be excluded before fitting.  With the outlier removed, $n=9$ data points remain.
+
+% ---- REFITTING AFTER OUTLIER REMOVAL ----
+\subsubsection{(b) Polynomial Fitting --- After Outlier Removal}
+
+After removing the outlier, all three polynomial models are re-estimated on the cleaned 9-point dataset.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p1_overlay_clean.png}{
+    \includegraphics[width=0.65\textwidth]{../Part_1/figures/p1_overlay_clean.png}
+}{
+    \fbox{\parbox{0.6\textwidth}{\centering Insert overlay plot without outlier.}}
+}
+\caption{Overlay of polynomial fits after outlier removal.}
+\end{figure}
+
+\noindent\textbf{Comment.}
+After removing the outlier, the three curves are much closer together and all follow the natural downward trend of the data.  Visually, even the linear fit captures the pattern well.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|c|c|c|c}
+\toprule
+\textbf{Degree} & $R^2$ (with outlier) & $R^2$ (cleaned) & \% increase (cleaned) & Improvement \\
+\midrule
+Linear    & 0.1345 & 0.9439 & --- & +0.8094 \\
+Quadratic & 0.2534 & 0.9725 & 3.03\% & +0.7191 \\
+Cubic     & 0.3829 & 0.9787 & 0.64\% & +0.5958 \\
+\bottomrule
+\end{tabular}
+\caption{$R^2$ comparison before and after outlier removal.}
+\label{tab:p1_r2_comparison}
+\end{table}
+
+\noindent\textbf{Comment.}
+Once the outlier is excluded, every model's $R^2$ improves substantially.  The linear fit jumps from 0.1345 all the way to 0.9439, showing that the single bad data point was responsible for most of the earlier poor performance.
+Looking at the cleaned results, the step from linear to quadratic adds only 3.03\% to $R^2$, and quadratic to cubic adds a mere 0.64\%.  Both increments are negligible compared to the complexity they introduce.  Therefore the \textbf{linear model} is the most sensible choice here --- it already explains over 94\% of the variance with just two parameters.
+
+\medskip
+The fitted equations on the cleaned data are:
+\begin{align*}
+\text{Linear:}    \quad & y = -530.83x + 11\,621.67 & R^2 &= 0.9439 \\
+\text{Quadratic:} \quad & y = 37.44x^2 - 863.13x + 12\,024.17 & R^2 &= 0.9725 \\
+\text{Cubic:}     \quad & y = -7.46x^3 + 140.17x^2 - 1221.74x + 12\,204.42 & R^2 &= 0.9787
+\end{align*}
+
+% ---- BEST FIT ----
+\subsubsection{(c) Graph of Best-Fit Function}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p1_best_fit.png}{
+    \includegraphics[width=0.65\textwidth]{../Part_1/figures/p1_best_fit.png}
+}{
+    \fbox{\parbox{0.6\textwidth}{\centering Insert best-fit graph.}}
+}
+\caption{Best-fit polynomial (linear) plotted with the cleaned data.}
+\end{figure}
+
+\noindent\textbf{Comment.}
+The figure shows the linear model plotted alongside the cleaned data points.  The fit closely follows the downward trend, confirming that the linear model is indeed a good representation of the underlying relationship.
+
+% ---- PREDICTION ----
+\subsubsection{(d) Prediction for 1997}
+
+Using the regression models, we predict the average number of insured persons in 1997 ($x=10$).  We report predictions from all three models both with and without the outlier, to show its impact on the forecasts.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p1_prediction_1997.png}{
+    \includegraphics[width=0.65\textwidth]{../Part_1/figures/p1_prediction_1997.png}
+}{
+    \fbox{\parbox{0.6\textwidth}{\centering Insert prediction plot.}}
+}
+\caption{Prediction for 1997 using the best-fit model on cleaned data.}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|c|c}
+\toprule
+\textbf{Degree} & Prediction (with outlier) & Prediction (cleaned) \\
+\midrule
+Linear    & 6\,313 & 6\,313 \\
+Quadratic & 9\,318 & 7\,137 \\
+Cubic     & 4\,260 & 6\,540 \\
+\bottomrule
+\end{tabular}
+\caption{Predicted number of insured persons in 1997.}
+\end{table}
+
+\noindent\textbf{Comment.}
+Using the selected linear model on the cleaned data, we get a forecast of roughly \textbf{6\,313} insured persons for 1997.  Notice that the linear prediction happens to be identical with and without the outlier --- the single bad point did not shift the overall slope enough to matter at $x=10$.  The quadratic and cubic predictions, on the other hand, diverge noticeably between the two scenarios, which is a reminder that higher-degree polynomials amplify the effect of noisy data, especially when extrapolating beyond the training range.
+
+% ──────────────────────────────────────────────────────────────────────────────
+\subsection{Problem 2 --- Heating Oil Multiple Regression}
+
+The goal is to develop a model for estimating heating oil used for a single-family home in January, based on average temperature and amount of insulation in inches.  The dataset contains 15 observations.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccc}
+\toprule
+\textbf{Oil (gal)} & \textbf{Temp (\textdegree F)} & \textbf{Insulation (in)} \\
+\midrule
+270 & 40 & 4  \\
+362 & 27 & 4  \\
+162 & 40 & 10 \\
+ 45 & 73 & 6  \\
+ 91 & 65 & 7  \\
+233 & 65 & 40 \\
+372 & 10 & 6  \\
+305 &  9 & 10 \\
+234 & 24 & 10 \\
+122 & 65 & 4  \\
+ 25 & 66 & 10 \\
+210 & 41 & 6  \\
+450 & 22 & 4  \\
+325 & 40 & 4  \\
+ 52 & 60 & 10 \\
+\bottomrule
+\end{tabular}
+\caption{Heating oil dataset.}
+\end{table}
+
+% ---- LINEAR MODEL (WITH OUTLIER) ----
+\subsubsection{(a.1) Linear Model}
+
+Let $f(\mathbf{x}, \boldsymbol{\theta})$ be the output function of the linear model, where the input consists of two features: $x_1$ (average temperature) and $x_2$ (insulation thickness).  The model is:
+\[
+\hat{y} = \theta_0 + \theta_1 x_1 + \theta_2 x_2
+\]
+Parameters are estimated using least-squares regression (Normal Equation).
+
+\medskip\noindent
+The fitted equation is:
+\[
+\hat{y} = 426.97 - 5.27\,x_1 + 1.97\,x_2 \qquad (R^2 = 0.6967)
+\]
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_linear_surface.png}{
+    \includegraphics[width=0.55\textwidth]{../Part_1/figures/p2_linear_surface.png}
+}{
+    \fbox{\parbox{0.5\textwidth}{\centering Insert linear model surface plot.}}
+}
+\caption{Linear model regression surface vs.\ true values.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_linear_2d.png}{
+    \includegraphics[width=0.75\textwidth]{../Part_1/figures/p2_linear_2d.png}
+}{
+    \fbox{\parbox{0.7\textwidth}{\centering Insert 2D projections for linear model.}}
+}
+\caption{2D projections: Temperature vs Oil and Insulation vs Oil (Linear).}
+\end{figure}
+
+\noindent\textbf{Comment.}
+The linear model yields $R^2 = 0.6967$, meaning it explains about 70\% of the variance.  As we can see from the 2D projections, the linear fit follows the dominant trend --- oil consumption decreases as temperature rises --- but the insulation coefficient is positive ($+1.97$), which contradicts physical intuition.  This is likely caused by the outlier (Insulation\,=\,40) pulling the coefficient upward.
+
+% ---- QUADRATIC MODEL (WITH OUTLIER) ----
+\subsubsection{(a.2) Quadratic Model}
+
+The quadratic model includes all second-order terms and the cross-product:
+\[
+\hat{y} = \theta_0 + \theta_1 x_1 + \theta_2 x_2 + \theta_3 x_1^2 + \theta_4 x_1 x_2 + \theta_5 x_2^2
+\]
+The fitted equation is:
+\[
+\hat{y} = 680.03 - 6.17\,x_1 - 41.72\,x_2 - 0.01\,x_1^2 + 0.24\,x_1 x_2 + 0.66\,x_2^2 \qquad (R^2 = 0.9742)
+\]
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_quad_surface.png}{
+    \includegraphics[width=0.55\textwidth]{../Part_1/figures/p2_quad_surface.png}
+}{
+    \fbox{\parbox{0.5\textwidth}{\centering Insert quadratic model surface plot.}}
+}
+\caption{Quadratic model regression surface vs.\ true values.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_quad_2d.png}{
+    \includegraphics[width=0.75\textwidth]{../Part_1/figures/p2_quad_2d.png}
+}{
+    \fbox{\parbox{0.7\textwidth}{\centering Insert 2D projections for quadratic model.}}
+}
+\caption{2D projections: Temperature vs Oil and Insulation vs Oil (Quadratic).}
+\end{figure}
+
+\noindent\textbf{Comment.}
+The quadratic model achieves $R^2 = 0.9742$, a substantial jump from the linear model.  It can capture the non-linear interactions between temperature and insulation and handles the high-insulation data point more gracefully.
+
+\medskip
+\noindent
+\textbf{$R^2$ Comparison:}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|c}
+\toprule
+\textbf{Model} & $R^2$ \\
+\midrule
+Linear    & 0.6967 \\
+Quadratic & 0.9742 \\
+\bottomrule
+\end{tabular}
+\caption{$R^2$ comparison for linear and quadratic models (all data).}
+\end{table}
+
+\noindent\textbf{Comment.}
+As shown in the table, the quadratic model provides a significantly better fit than the linear one.  It explains 97.4\% of the variance in the data compared to only 69.7\% for the linear model.
+
+% ---- OUTLIER DETECTION ----
+\subsubsection{(b) Outlier Detection and Removal}
+
+Since the input space is two-dimensional (temperature and insulation), a simple Z-score on individual features would miss correlations between them.  Instead, we use the \textbf{Mahalanobis distance}, which takes the full covariance structure into account:
+\[
+D_M(\mathbf{x}) = \sqrt{(\mathbf{x} - \boldsymbol{\mu})^T \mathbf{S}^{-1} (\mathbf{x} - \boldsymbol{\mu})}
+\]
+We compare each point's $D_M$ against a $\chi^2$-based threshold at the 95\% confidence level ($p=2$ features).  Any point that exceeds this threshold is flagged.
+
+\noindent\textbf{Comment.}
+The only flagged observation is the one with Temp\,=\,65\textdegree F and Insulation\,=\,40.  Looking at the raw data, all other insulation values fall between 4 and 10, so a value of 40 is clearly anomalous.  Interestingly, this point was also the reason the linear model's insulation coefficient came out positive ($+1.97$) earlier --- once we remove it, the coefficient flips to a physically meaningful negative value.
+
+% ---- REFITTING AFTER OUTLIER REMOVAL ----
+\subsubsection{(b.1) Linear Model after Removing Outlier}
+
+After removing the outlier, the linear model is refitted on the 14-point cleaned dataset.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_linear_surface_clean.png}{
+    \includegraphics[width=0.55\textwidth]{../Part_1/figures/p2_linear_surface_clean.png}
+}{
+    \fbox{\parbox{0.5\textwidth}{\centering Insert cleaned linear surface plot.}}
+}
+\caption{Linear model surface after outlier removal.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_linear_2d_clean.png}{
+    \includegraphics[width=0.75\textwidth]{../Part_1/figures/p2_linear_2d_clean.png}
+}{
+    \fbox{\parbox{0.7\textwidth}{\centering Insert cleaned linear 2D projections.}}
+}
+\caption{2D projections after outlier removal (Linear).}
+\end{figure}
+
+\noindent\textbf{Comment.}
+After removing the outlier, the linear model's $R^2$ jumps from 0.6967 to 0.9606 --- a dramatic improvement.  The insulation coefficient is now negative ($-23.23$), which makes physical sense: more insulation means less heat loss, hence less oil consumption.
+
+\subsubsection{(b.2) Quadratic Model after Removing Outlier}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_quad_surface_clean.png}{
+    \includegraphics[width=0.55\textwidth]{../Part_1/figures/p2_quad_surface_clean.png}
+}{
+    \fbox{\parbox{0.5\textwidth}{\centering Insert cleaned quadratic surface plot.}}
+}
+\caption{Quadratic model surface after outlier removal.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{../Part_1/figures/p2_quad_2d_clean.png}{
+    \includegraphics[width=0.75\textwidth]{../Part_1/figures/p2_quad_2d_clean.png}
+}{
+    \fbox{\parbox{0.7\textwidth}{\centering Insert cleaned quadratic 2D projections.}}
+}
+\caption{2D projections after outlier removal (Quadratic).}
+\end{figure}
+
+% ---- COMPARISON TABLE ----
+\medskip
+\noindent\textbf{Comparison of Performance Before and After Removing Outlier:}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|c|c|c}
+\toprule
+\textbf{Model Type} & $R^2$ (before removing outlier) & $R^2$ (after removing outlier) & Improvement \\
+\midrule
+Linear    & 0.6967 & 0.9606 & +0.2639 \\
+Quadratic & 0.9742 & 0.9769 & +0.0027 \\
+\bottomrule
+\end{tabular}
+\caption{$R^2$ before and after outlier removal for Problem~2.}
+\label{tab:p2_r2_comparison}
+\end{table}
+
+\noindent\textbf{Comment.}
+The table reveals an interesting asymmetry: the linear model benefits enormously from outlier removal ($R^2$ rises by 0.2639), whereas the quadratic model barely changes ($+0.0027$).  This tells us that the extra flexibility of the quadratic terms was already compensating for the outlier internally, while the linear model had no such mechanism.
+
+Once the data is clean, however, both models perform almost equally well --- the gap between them shrinks to just 1.63\%.  At that point, the added complexity of five quadratic coefficients is hard to justify.  We therefore select the \textbf{linear model} as our preferred fit for the cleaned dataset, since it achieves $R^2 = 0.9606$ with only three parameters.
+
+\medskip
+The cleaned-data equations are:
+\begin{align*}
+\text{Linear:}    \quad & \hat{y} = 601.60 - 5.48\,x_1 - 23.23\,x_2 & R^2 &= 0.9606 \\
+\text{Quadratic:} \quad & \hat{y} = 785.52 - 6.96\,x_1 - 72.16\,x_2 - 0.004\,x_1^2 + 0.26\,x_1 x_2 + 2.74\,x_2^2 \!\!\! & R^2 &= 0.9769
+\end{align*}
+
+% ---- PREDICTION ----
+\subsubsection{(c) Prediction for Temp\,=\,15\textdegree F, Insulation\,=\,5~in}
+
+Using the regression models fitted on the cleaned data, we predict the oil consumption for an average temperature of 15\textdegree F and insulation of 5~inches:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{l|c}
+\toprule
+\textbf{Model (cleaned)} & Predicted Oil (gal) \\
+\midrule
+Linear    & 403.22 \\
+Quadratic & 407.35 \\
+\bottomrule
+\end{tabular}
+\caption{Predicted oil usage for Temp\,=\,15\textdegree F and Insulation\,=\,5~in.}
+\end{table}
+
+\noindent\textbf{Comment.}
+The two predictions are very close (about 400--410~gallons), which is expected for such cold weather with thin insulation.  The fact that both models agree on the forecast reinforces our earlier observation: on clean data, the quadratic terms add almost no predictive value over the simpler linear model.
 
 \section{Part 2: Classical ML Modeling}
 
