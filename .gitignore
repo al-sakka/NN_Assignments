@@ -9,3 +9,7 @@ Assignment_1/REPORT/report.out
 Assignment_1/REPORT/report.fls
 Assignment_1/REPORT/report.synctex.gz
 Assignment_1/REPORT/report.toc
+*.pyc
+*env*
+*.npy
+previews
