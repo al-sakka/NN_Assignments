@@ -15,6 +15,13 @@
 \usepackage{microtype}
 \usepackage{titlesec}
 
+% Custom color used on the title page.
+\definecolor{NTRA_Blue}{RGB}{0,82,155}
+
+% Fallbacks so the document still compiles if border helpers are not loaded.
+\providecommand{\MyPageBorder}{}
+\providecommand{\AddToShipoutPictureFG}[1]{}
+
 \geometry{a4paper, margin=1in}
 \onehalfspacing
 
@@ -131,19 +138,33 @@ The implemented flow in Part\_2 scripts is:
 \end{enumerate}
 
 \subsection{Nonlinear SVM Used (RBF) and Its Specifications}
-The nonlinear SVM used in this implementation is the \textbf{RBF kernel} SVM with:
-\begin{itemize}
-    \item Kernel: \texttt{rbf}
-    \item \(C = 10.0\)
-    \item \(\gamma = \texttt{scale}\)
-    \item Multi-class strategy: one-vs-one (scikit-learn \texttt{SVC})
-\end{itemize}
+The nonlinear model used in this implementation is \textbf{C-SVC with RBF kernel} from scikit-learn.
 
-The RBF kernel is:
+The kernel function is:
 \[
 K(\mathbf{x},\mathbf{z}) = \exp\left(-\gamma\lVert \mathbf{x}-\mathbf{z} \rVert^2\right)
 \]
-It allows nonlinear decision boundaries by mapping data to a higher-dimensional implicit space. This is useful for digit data where class separation is not perfectly linear.
+which enables curved (nonlinear) decision boundaries for classes that are not linearly separable.
+
+Exact settings used in code (Part\_2/step3\_svm.py):
+\begin{itemize}
+    \item \texttt{kernel='rbf'}
+    \item \(C = 10.0\)
+    \item \(\gamma = \texttt{scale}\)
+    \item \texttt{decision\_function\_shape='ovo'} (one-vs-one multiclass)
+\end{itemize}
+
+Feature scaling step before SVM training/inference:
+\begin{itemize}
+    \item \texttt{StandardScaler()} is fitted on training features.
+    \item The same scaler is applied to both train and test features.
+\end{itemize}
+
+For \(\gamma = \texttt{scale}\), scikit-learn uses:
+\[
+\gamma = \frac{1}{n_{\text{features}}\,\mathrm{Var}(X)}
+\]
+All remaining \texttt{SVC} parameters are left at library defaults.
 
 \subsection{Comparative Results (Accuracy and Processing Time)}
 Table~\ref{tab:part2_results} summarizes all required combinations with measured real elapsed time.
@@ -185,8 +206,8 @@ Best SVM result: \textbf{SVM Nonlinear (RBF) with DCT} (96.90\%).
 
 \begin{figure}[H]
 \centering
-\IfFileExists{Part_2/figures/cm_svm_best.png}{
-    \includegraphics[width=0.62\textwidth]{Part_2/figures/cm_svm_best.png}
+\IfFileExists{PART2_screenshorts/ALL_PLOTS.png}{
+    \includegraphics[width=0.62\textwidth]{PART2_screenshorts/ALL_PLOTS.png}
 }{
     \fbox{\parbox{0.85\textwidth}{Insert confusion matrix image for best SVM result here (RBF with DCT).}}
 }
