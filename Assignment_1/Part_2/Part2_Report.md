@@ -81,27 +81,52 @@ A single dashboard window is generated that includes:
 1. Accuracy comparison bar chart
 1. Time comparison bar chart
 
-## 3. Nonlinear SVM (Required Explanation)
+## 3. Nonlinear SVM Used and Its Specifications
 
-The nonlinear SVM in this work is the RBF-kernel SVM:
+The nonlinear classifier used in this assignment is **C-SVC with RBF kernel** from `sklearn.svm.SVC`.
+
+### 3.1 Model Definition
+
+RBF kernel form:
 
 $$
 K(x_i, x_j) = \exp\left(-\gamma \|x_i - x_j\|^2\right)
 $$
 
-Why nonlinear SVM helps:
+This kernel creates nonlinear decision boundaries, which is useful for handwritten digit classes that are not perfectly separable by a single linear hyperplane.
 
-1. Digit classes are not perfectly linearly separable in raw or compressed feature spaces
-1. RBF maps samples into a higher-dimensional implicit space
-1. This allows curved decision boundaries that better separate confusing classes
+### 3.2 Exact Specs Used in Code
 
-Configuration used in experiments:
+From `step3_svm.py`, the nonlinear SVM is trained with:
 
 1. `kernel="rbf"`
-1. `C=10`
+1. `C=10.0`
 1. `gamma="scale"`
+1. `decision_function_shape="ovo"` (one-vs-one multiclass)
 
-This model achieved the highest overall test accuracy in this assignment (with DCT features).
+Input normalization before SVM:
+
+1. `StandardScaler()` is fit on training features only
+1. The same scaler is applied to both train and test features
+
+Interpretation of key settings:
+
+1. `C=10.0`: relatively stronger penalty on training errors (tighter margin with fewer violations)
+1. `gamma="scale"`: automatically sets
+
+$$
+\gamma = \frac{1}{n_{features} \cdot \mathrm{Var}(X)}
+$$
+
+which adapts the RBF width to feature dimensionality and data spread.
+
+All remaining `SVC` options are left at scikit-learn defaults.
+
+### 3.3 Why This Nonlinear SVM Was Used
+
+1. It captures curved class boundaries better than linear SVM on ReducedMNIST features
+1. It gave consistently higher accuracy than linear SVM in the experiment table
+1. The best overall result was achieved by this model with DCT features (96.90%)
 
 ## 4. Experimental Results
 

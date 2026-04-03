@@ -1,3 +1,11 @@
 # Python bytecode/cache directories and files
 __pycache__/
 *.py[cod]
+Assignment_1/REPORT/report.synctex(busy)
+Assignment_1/REPORT/report.log
+Assignment_1/REPORT/report.fdb_latexmk
+Assignment_1/REPORT/report.aux
+Assignment_1/REPORT/report.out
+Assignment_1/REPORT/report.fls
+Assignment_1/REPORT/report.synctex.gz
+Assignment_1/REPORT/report.toc
