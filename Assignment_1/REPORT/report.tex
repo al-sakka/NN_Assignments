@@ -10,8 +10,12 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{newtxtext,newtxmath}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
 \usepackage{hyperref}
-\usepackage{charter}
 \usepackage{microtype}
 \usepackage{titlesec}
 
@@ -22,12 +26,42 @@
 \providecommand{\MyPageBorder}{}
 \providecommand{\AddToShipoutPictureFG}[1]{}
 
-\geometry{a4paper, margin=1in}
+\geometry{a4paper, margin=1in, headheight=14pt}
 \graphicspath{{./}{../}}
-\onehalfspacing
+\setstretch{1.25}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\arraystretch}{1.12}
 
-\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}[\titlerule]
-\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NTRA_Blue,
+    citecolor=NTRA_Blue,
+    urlcolor=NTRA_Blue,
+    pdftitle={NN Assignment 1 Report}
+}
+
+\captionsetup{font=small, labelfont=bf, labelsep=period}
+\setlist{itemsep=0.25em, topsep=0.35em, parsep=0pt, partopsep=0pt}
+
+\titleformat{\section}{\Large\bfseries\color{NTRA_Blue}}{\thesection}{0.8em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.1em}{0.5em}
+\titlespacing*{\subsubsection}{0pt}{0.9em}{0.4em}
+
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{NN Assignment 1}
+\fancyhead[R]{\nouppercase{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
 
 \begin{document}
 
@@ -36,6 +70,7 @@
 % ==========================================
 \begin{titlepage}
     \centering
+    \thispagestyle{empty}
     
     % --- Logos and Header ---
     \begin{minipage}[c]{0.2\textwidth}
@@ -62,8 +97,8 @@
 
     % --- Main Title ---
     \rule{\linewidth}{0.8mm} \\[0.5cm]
-    {\color{NTRA_Blue} \huge \bfseries NN ASSINGMENT 1} \\[0.4cm]
-    {\color{NTRA_Blue} \large ...} \\
+    {\color{NTRA_Blue} \huge \bfseries NN ASSIGNMENT 1} \\[0.4cm]
+    {\color{NTRA_Blue} \large Technical Report} \\
     \rule{\linewidth}{0.8mm} \\[1.5cm]
 
     % \vspace{0.5cm}
