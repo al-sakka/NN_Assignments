@@ -61,7 +61,7 @@ def extract_hog_features(images, pixels_per_cell=(4, 4), cells_per_block=(2, 2))
 
 
 if __name__ == '__main__':
-    from step0_load_data import load_data
+    from Assignment_1.Part_2.load_data import load_data
 
     train_images, _, test_images, _ = load_data(prefer_mat=False, use_kagglehub=True)
 
