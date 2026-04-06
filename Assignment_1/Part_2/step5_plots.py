@@ -49,7 +49,23 @@ def _draw_metric_bars(ax, results, metric):
     ax.legend()
 
 
+def _best_key_by_prefix(results, prefix):
+    candidates = [key for key in results.keys() if key[0].startswith(prefix)]
+    if not candidates:
+        raise ValueError(f'No classifiers found for prefix: {prefix}')
+    return max(candidates, key=lambda key: results[key][0])
+
+
 def plot_all_together(test_labels, all_preds, results):
+    best_kmeans_key = _best_key_by_prefix(results, 'KMeans')
+    best_svm_key = _best_key_by_prefix(results, 'SVM')
+
+    kmeans_name, kmeans_feat = best_kmeans_key
+    svm_name, svm_feat = best_svm_key
+
+    kmeans_k = kmeans_name.replace('KMeans_', 'K=').replace('K=K', 'K=')
+    svm_kernel = svm_name.split('_', 1)[1].upper()
+
     fig = plt.figure(figsize=(18, 12))
     gs = fig.add_gridspec(2, 2)
 
@@ -58,8 +74,8 @@ def plot_all_together(test_labels, all_preds, results):
     ax3 = fig.add_subplot(gs[1, 0])
     ax4 = fig.add_subplot(gs[1, 1])
 
-    _draw_confusion(ax1, test_labels, all_preds[('KMeans_K32', 'HOG')], 'Best K-Means: HOG + K=32')
-    _draw_confusion(ax2, test_labels, all_preds[('SVM_rbf', 'HOG')], 'Best SVM: HOG + RBF')
+    _draw_confusion(ax1, test_labels, all_preds[best_kmeans_key], f'Best K-Means: {kmeans_feat} + {kmeans_k}')
+    _draw_confusion(ax2, test_labels, all_preds[best_svm_key], f'Best SVM: {svm_feat} + {svm_kernel}')
     _draw_metric_bars(ax3, results, metric='accuracy')
     _draw_metric_bars(ax4, results, metric='time')
 
