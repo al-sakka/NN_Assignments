@@ -51,7 +51,8 @@ def extract_hog_features(images, pixels_per_cell=(4, 4), cells_per_block=(2, 2))
             orientations=9,
             pixels_per_cell=pixels_per_cell,
             cells_per_block=cells_per_block,
-            feature_vector=True,
+            block_norm='L2-Hys',
+            visualize=False
         )
         feature_list.append(feat)
 

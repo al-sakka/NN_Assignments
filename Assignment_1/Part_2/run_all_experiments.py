@@ -9,10 +9,10 @@ import time
 import numpy as np
 from sklearn.metrics import accuracy_score
 
-from Assignment_1.Part_2.load_data import load_data
-from Assignment_1.Part_2.features import extract_dct_features, extract_hog_features, extract_pca_features
-from Assignment_1.Part_2.Kmeans import predict_kmeans, train_kmeans_classifier
-from Assignment_1.Part_2.svm import train_and_test_svm
+from load_data import load_data
+from features import extract_dct_features, extract_hog_features, extract_pca_features
+from Kmeans import predict_kmeans, train_kmeans_classifier
+from svm import train_and_test_svm
 
 
 FEATURES = ('DCT', 'PCA', 'HOG')
