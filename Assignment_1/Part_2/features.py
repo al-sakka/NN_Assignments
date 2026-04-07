@@ -8,6 +8,7 @@ import time
 
 import numpy as np
 from scipy.fft import dctn
+from scipy.ndimage import gaussian_filter
 from sklearn.decomposition import PCA
 from skimage.feature import hog
 
@@ -46,12 +47,14 @@ def extract_hog_features(images, pixels_per_cell=(4, 4), cells_per_block=(2, 2))
 
     for i in range(images.shape[0]):
         img = images[i].reshape(28, 28)
+        img = gaussian_filter(img, sigma=0.5)   # smooth JPEG block artifacts
         feat = hog(
             img,
             orientations=9,
             pixels_per_cell=pixels_per_cell,
             cells_per_block=cells_per_block,
             block_norm='L2-Hys',
+            transform_sqrt=True,                # Dalal & Triggs gamma correction
             visualize=False
         )
         feature_list.append(feat)
