@@ -5,7 +5,6 @@ Description: Load ReducedMNIST from MAT or JPG sources with safe fallbacks.
 """
 
 from pathlib import Path
-import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -144,25 +143,31 @@ def load_from_kagglehub(
     local_dir_name='ReducedMNIST_kaggle',
     force_download=False,
 ):
-    """Download ReducedMNIST JPG dataset to local run directory and load it."""
+    """Download ReducedMNIST JPG dataset via KaggleHub and load it."""
     import kagglehub
 
-    run_dir = Path(__file__).resolve().parent
-    dataset_dir = run_dir / local_dir_name
+    _ = local_dir_name  # Kept for backward compatibility with older calls.
 
-    has_images = dataset_dir.exists() and any(dataset_dir.rglob('*.jpg'))
-    if force_download and dataset_dir.exists():
-        shutil.rmtree(dataset_dir)
-        has_images = False
+    download_kwargs = {}
+    if force_download:
+        download_kwargs['force_download'] = True
 
-    if not has_images:
-        if dataset_dir.exists():
-            shutil.rmtree(dataset_dir)
-        dataset_dir.mkdir(parents=True, exist_ok=True)
-        print(f'Downloading Kaggle dataset to: {dataset_dir}')
-        kagglehub.dataset_download(dataset, output_dir=str(dataset_dir))
+    try:
+        path = Path(kagglehub.dataset_download(dataset, **download_kwargs))
+    except TypeError:
+        # Older kagglehub versions may not support force_download.
+        path = Path(kagglehub.dataset_download(dataset))
 
-    return load_from_jpg_dataset(dataset_dir)
+    training_data_path = path / 'Reduced MNIST Data' / 'Reduced Trainging data'
+    test_data_path = path / 'Reduced MNIST Data' / 'Reduced Testing data'
+
+    if training_data_path.exists() and test_data_path.exists():
+        train_images, train_labels = _load_image_split(training_data_path)
+        test_images, test_labels = _load_image_split(test_data_path)
+        return train_images, train_labels, test_images, test_labels
+
+    print(f'Expected Kaggle folder layout not found under: {path}')
+    return load_from_jpg_dataset(path)
 
 
 def load_data(
