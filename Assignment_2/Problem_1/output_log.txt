@@ -1,0 +1,43 @@
+======================================================================
+Problem 1: MLP Classification on ReducedMNIST
+Device: cpu
+======================================================================
+Train dir: C:\Users\Z0055xcj\Documents\Academics\NeuralNetworks\NN_Assignments\Assignment_2\Problem_1\ReducedMNIST_kaggle\Reduced MNIST Data\Reduced Trainging data
+Test  dir: C:\Users\Z0055xcj\Documents\Academics\NeuralNetworks\NN_Assignments\Assignment_2\Problem_1\ReducedMNIST_kaggle\Reduced MNIST Data\Reduced Testing data
+Loaded 10000 train, 2000 test samples.
+
+Extracting features...
+  DCT: 10000 images -> 225 features
+  DCT: 2000 images -> 225 features
+  PCA: keeping 262 components (95.0% variance)
+  Training Autoencoder (30 epochs, bottleneck=64)...
+    Epoch 10/30  Loss: 0.019464
+    Epoch 20/30  Loss: 0.014392
+    Epoch 30/30  Loss: 0.012066
+  Autoencoder: 10000 train / 2000 test -> 64 features
+
+--- Feature: DCT (dim=225) ---
+  MLP 1-Hidden: [128] ... Acc=96.2%  Time=11365.9 ms
+  MLP 3-Hidden: [256, 128, 64] ... Acc=96.0%  Time=17382.5 ms
+  MLP 4-Hidden: [256, 128, 64, 32] ... Acc=96.2%  Time=17615.3 ms
+
+--- Feature: PCA (dim=262) ---
+  MLP 1-Hidden: [128] ... Acc=93.8%  Time=13382.5 ms
+  MLP 3-Hidden: [256, 128, 64] ... Acc=93.3%  Time=20349.4 ms
+  MLP 4-Hidden: [256, 128, 64, 32] ... Acc=93.8%  Time=22048.2 ms
+
+--- Feature: AutoEncoder (dim=64) ---
+  MLP 1-Hidden: [128] ... Acc=97.4%  Time=10412.1 ms
+  MLP 3-Hidden: [256, 128, 64] ... Acc=97.0%  Time=17765.7 ms
+  MLP 4-Hidden: [256, 128, 64, 32] ... Acc=97.0%  Time=20303.9 ms
+
+======================================================================
+RESULTS SUMMARY
+======================================================================
+Configuration   |  Acc (%)  Time (ms) |  Acc (%)  Time (ms) |  Acc (%)  Time (ms) 
+----------------------------------------------------------------------------------
+1-Hidden        |     96.2    11365.9 |     93.8    13382.5 |     97.4    10412.1 
+3-Hidden        |     96.0    17382.5 |     93.3    20349.4 |     97.0    17765.7 
+4-Hidden        |     96.2    17615.3 |     93.8    22048.2 |     97.0    20303.9 
+
+Plot saved to mlp_results.png
