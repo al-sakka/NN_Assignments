@@ -28,7 +28,7 @@ from torch.utils.data import DataLoader, TensorDataset
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-DATASET_ROOT = Path(__file__).resolve().parent / "ReducedMNIST_kaggle"
+DATASET_ROOT = Path(__file__).resolve().parent.parent / "ReducedMNIST_kaggle"
 RANDOM_SEED = 42
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
