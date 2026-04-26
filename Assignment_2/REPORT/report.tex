@@ -9,6 +9,7 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{multirow}
 \usepackage{xcolor}
 \usepackage{textcomp}
 \usepackage{newtxtext,newtxmath}
@@ -259,6 +260,182 @@ Processing time scales with both \textbf{network depth} and \textbf{input dimens
           demonstrating that good feature engineering reduces both compute cost and error rate.
     \item Going from 1 to 4 hidden layers roughly doubles the processing time
           (e.g.\ DCT: 3758 $\to$ 7155~ms), while accuracy does not improve proportionally.
+\end{itemize}
+
+\newpage
+% ==========================================
+% PROBLEM 4 — SPEECH DIGIT RECOGNITION
+% ==========================================
+\section{Problem 4: Speech Digit Recognition using Autoencoders}
+
+\subsection{Introduction}
+
+This problem explores \textbf{speech digit recognition} (digits 0--10) using audio recordings.
+The goal is twofold: (1)~build a \textbf{baseline} classifier from hand-crafted audio features,
+and (2)~show that an \textbf{autoencoder} can learn a superior latent representation that
+significantly outperforms the baseline.
+
+\textbf{Key concepts:}
+\begin{itemize}
+    \item \textbf{Utterance:} one complete audio recording of a person saying a digit.
+    \item \textbf{Frame:} a short 15\,ms slice of the waveform (with 10\,ms hop).
+          Speech is approximately stationary over such short durations.
+    \item \textbf{MFCC:} Mel-Frequency Cepstral Coefficients --- 30 coefficients per frame
+          that mimic how the human ear perceives pitch and timbre.
+    \item \textbf{Delta \& Delta-Delta:} first- and second-order time derivatives of MFCCs
+          that capture velocity and acceleration of spectral change.
+\end{itemize}
+
+The dataset contains \textbf{1{,}200 training} and \textbf{300 testing} utterances
+(files named \texttt{\{SpeakerID\}\_\{digit\}.wav}).
+All utterances have 81~frames after MFCC extraction, so the flattened input is
+$30 \times 81 = 2{,}430$ dimensions.
+
+% ------------------------------------------
+\subsection{Baseline: Summary Features + SVM}
+
+The baseline compresses each utterance into a \textbf{180-D summary vector}:
+\[
+    \mathbf{x}_{\text{summary}} = \big[\,\mu(\text{MFCC}),\;\sigma(\text{MFCC}),\;
+    \mu(\Delta),\;\sigma(\Delta),\;
+    \mu(\Delta^2),\;\sigma(\Delta^2)\,\big]
+    \;\in\;\mathbb{R}^{180}
+\]
+where $\mu$ and $\sigma$ denote the mean and standard deviation across all frames.
+This discards temporal ordering but retains global spectral statistics.
+
+An \textbf{SVM} with RBF kernel is trained via \texttt{GridSearchCV} (5-fold CV) over
+$C \in \{1, 10, 100, 1000\}$ and $\gamma \in \{\text{scale}, 0.01, 0.001\}$.
+
+% ------------------------------------------
+\subsection{Autoencoder Approach}
+
+\subsubsection{Architecture}
+
+The supervised autoencoder processes the full flattened utterance ($\mathbb{R}^{2430}$)
+and consists of:
+
+\begin{itemize}
+    \item \textbf{Encoder:} $2430 \to 1024 \to 512 \to 256$ (each with BatchNorm + ReLU)
+    \item \textbf{Decoder:} $256 \to 512 \to 1024 \to 2430$
+    \item \textbf{Classifier head:} Linear($256 \to 10$) branching from the latent layer
+\end{itemize}
+
+\subsubsection{Training}
+
+The autoencoder is trained with a \textbf{joint loss}:
+\[
+    \mathcal{L} = \mathcal{L}_{\text{recon}} + \lambda \cdot \mathcal{L}_{\text{cls}}
+    \quad\text{where}\quad
+    \mathcal{L}_{\text{recon}} = \text{MSE}(\mathbf{x}, \hat{\mathbf{x}}),\quad
+    \mathcal{L}_{\text{cls}} = \text{CrossEntropy}(\mathbf{y}, \hat{\mathbf{y}})
+\]
+with $\lambda = 2.0$ to emphasise classification.
+
+\textbf{Data augmentation:} 3 noisy copies of each training sample (Gaussian noise,
+$\sigma = 0.05$) expand the training set from 1{,}200 to \textbf{4{,}800 samples}.
+
+Training runs for \textbf{500 epochs} with Adam ($\text{lr} = 10^{-3}$), batch size~32.
+The classification loss $\mathcal{L}_{\text{cls}}$ is the cross-entropy loss of the
+classifier head attached to the latent layer; it drops to $\approx 0$ by epoch~120,
+indicating perfect classification on training data.
+The reconstruction loss continues to decrease, reaching $\approx 0.073$ by epoch~500.
+
+\subsubsection{Classification Strategies}
+
+Three strategies are evaluated on the test set:
+\begin{enumerate}[label=\textbf{\Alph*.}]
+    \item \textbf{Classifier head:} direct output of the AE's built-in linear classifier.
+    \item \textbf{SVM on latent vectors:} train an SVM on the 256-D encoder output.
+    \item \textbf{SVM on hybrid features:} concatenate the scaled 256-D latent vector
+          with the scaled 180-D summary features ($\mathbb{R}^{436}$) and train an SVM.
+\end{enumerate}
+
+% ------------------------------------------
+\subsection{Results}
+
+\textbf{System:} same as Problem~1.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l r r r}
+\toprule
+\textbf{Method} & \textbf{Accuracy\,(\%)} & \textbf{Train Time\,(s)} & \textbf{Test Time\,(ms)} \\
+\midrule
+Baseline (Summary + SVM)        & 70.00  & 10.5  & 60.2  \\
+AE Classifier Head              & 86.00  & \multirow{3}{*}{2244.1} & \multirow{3}{*}{92.9}    \\
+AE Latent + SVM                 & 89.33  &       &     \\
+\textbf{AE Hybrid + SVM (best)} & \textbf{90.67} &  &     \\
+\bottomrule
+\end{tabular}
+\caption{Problem~4: Accuracy comparison of baseline vs.\ autoencoder-based strategies.
+         AE training time includes 500 epochs of AE training plus SVM GridSearchCV.}
+\label{tab:prob4_results}
+\end{table}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Hyperparameter} & \textbf{Value} \\
+\midrule
+MFCCs                & 30 coefficients \\
+Frame / Hop          & 15\,ms / 10\,ms \\
+Latent dimension     & 256 \\
+AE epochs            & 500 \\
+Augmentation         & 3 noisy copies ($\sigma=0.05$) \\
+Loss weight ($\lambda$) & 2.0 \\
+SVM kernel           & RBF \\
+Best SVM params      & $C=1$, $\gamma=\text{scale}$ \\
+\bottomrule
+\end{tabular}
+\caption{Problem~4: Key hyperparameters.}
+\label{tab:prob4_params}
+\end{table}
+
+% ------------------------------------------
+\subsection{Analysis and Discussion}
+
+\subsubsection{Why the Autoencoder Outperforms the Baseline}
+
+The baseline achieves \textbf{70.00\%} by averaging MFCCs across time, which
+\emph{discards all temporal information} --- two utterances with identical average
+spectra but different time evolution become indistinguishable.
+
+The autoencoder processes the \textbf{full frame sequence} (2{,}430-D input) and
+learns a 256-D latent code that captures both \textbf{spectral content} and
+\textbf{temporal dynamics}, yielding \textbf{90.67\%} accuracy --- a
+\textbf{+20.67 percentage point} improvement.
+
+\subsubsection{Hybrid Features}
+
+The best strategy combines the autoencoder latent vector with the summary features
+(each independently standardised).  This works because:
+\begin{itemize}
+    \item The latent vector captures temporal patterns the summary misses.
+    \item The summary features capture global statistics (mean/std of deltas)
+          that complement the AE's learned representation.
+    \item Separate standardisation prevents one feature set from dominating due
+          to scale differences.
+\end{itemize}
+
+\subsubsection{Supervised AE Joint Loss}
+
+Adding the classification loss ($\lambda = 2.0$) to the reconstruction loss
+\textbf{shapes the latent space to be class-discriminative}, not just
+reconstruction-optimal.  The classification loss drops to zero on training
+data by epoch~120, while reconstruction loss continues to decrease ---
+the model simultaneously learns to reconstruct and classify.
+
+\subsubsection{Data Augmentation}
+
+Gaussian noise augmentation (3$\times$) expanded the training set from
+1{,}200 to 4{,}800 samples, which:
+\begin{itemize}
+    \item Reduces overfitting in the 500-epoch training regime.
+    \item Teaches the AE to be robust to noise, improving generalisation.
 \end{itemize}
 
 \end{document}

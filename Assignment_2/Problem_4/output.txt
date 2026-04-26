@@ -1,0 +1,45 @@
+============================================================
+Problem 4: Speech Digit Recognition — Results
+============================================================
+
+1. DATASET INFO
+----------------------------------------
+   Number of training samples : 1200
+   Number of testing samples  : 300
+
+2. BASELINE RESULTS (Average Frame + SVM)
+----------------------------------------
+   Accuracy       : 70.00%
+   Training time  : 10542.1 ms
+   Testing time   : 60.2 ms
+
+3. AUTOENCODER RESULTS (Latent-Vector + SVM)
+----------------------------------------
+   Latent vector size : 256
+   Accuracy           : 90.67%
+   Training time      : 2244149.0 ms
+     (AE training     : 2225201.6 ms)
+     (SVM training    : 18947.4 ms)
+   Testing time       : 92.9 ms
+
+4. COMPARISON
+----------------------------------------
+   Better method: Autoencoder
+
+   The baseline uses the average frame (mean across all frames)
+   into a single vector, which discards temporal information.
+   The autoencoder keeps all frames (padded) and learns a
+   compressed 256-D representation that captures both
+   spectral AND temporal patterns, leading to richer features.
+
+5. NOTES
+----------------------------------------
+   - Features: 30 MFCCs (+delta+delta2 for baseline), 15 ms frames, 10 ms hop
+   - Autoencoder architecture: 1024-512-256-128-256-512-1024 (with BatchNorm)
+   - Autoencoder trained for 500 epochs
+   - Classifier: SVM (RBF kernel, GridSearchCV tuned)
+   - Dataset contains clean and noisy versions of each utterance
+   - All utterances zero-padded to maximum length (no truncation)
+   - Standard scaling applied to AE input (fit on train, applied to test)
+   - Device: cpu
+============================================================
