@@ -207,24 +207,7 @@ Increasing depth from 1 to 3 hidden layers gave a modest accuracy boost for DCT
 layers \emph{decreased} accuracy in every feature type --- DCT dropped to 95.5\%,
 PCA to 93.3\%, and AutoEncoder to 96.7\%.
 
-This accuracy drop at 4 layers is a clear sign of \textbf{overfitting}:
-
-\begin{itemize}
-    \item \textbf{Too many parameters for the data:} the 4-layer MLP
-          (256--128--64--32) has significantly more trainable weights than the
-          1-layer variant.  With only 1{,}000 training samples per class,
-          the extra parameters fit noise in the training set rather than
-          learning generalisable patterns, leading to lower test accuracy.
-    \item \textbf{Vanishing gradient effect:} deeper networks propagate
-          smaller gradients to early layers, making it harder for those
-          layers to learn useful features in only 10 epochs.
-    \item \textbf{No regularisation:} the models use no dropout, weight
-          decay, or early stopping, so deeper architectures are especially
-          prone to memorising the training data.
-    \item \textbf{Sweet spot at 3 layers:} the 3-layer MLP strikes the best
-          balance --- enough capacity to capture non-linear patterns
-          without overfitting the limited dataset.
-\end{itemize}
+This accuracy drop at 4 layers is a clear sign of \textbf{overfitting}.
 
 \subsubsection{Effect of Feature Type}
 
