@@ -1,48 +1,6 @@
 """
 Problem 4: Data Augmentation and Data Synthesis using Autoencoder
              for Speech Digit Recognition
-
-=============================================================================
-CONCEPTUAL EXPLANATION (read before diving into code)
-=============================================================================
-
-1. UTTERANCE, FRAME, and FEATURE VECTOR
-   - An UTTERANCE is one complete audio recording of someone saying a digit
-     (e.g., one person saying "three"). It is a 1-D waveform of varying length.
-   - A FRAME is a short slice of that waveform (here 15 ms). We analyze audio
-     in frames because the signal is approximately stationary over such short
-     durations — the mouth / vocal cords don't change much in 15 ms.
-   - A FEATURE VECTOR is a compact numeric description of one frame.
-     We use MFCCs (Mel-Frequency Cepstral Coefficients), which mimic how the
-     human ear perceives pitch. We compute 30 MFCC coefficients per frame,
-     so each frame becomes a vector of length 30.
-
-2. WHY 15 ms FRAMES?
-   Speech changes slowly relative to the sampling rate (e.g., 8 kHz).
-   A 15 ms window ≈ 120 samples at 8 kHz, which is long enough to capture
-   frequency content but short enough that the signal is roughly constant.
-
-3. WHY PADDING?
-   Different utterances have different durations (someone says "one" faster
-   than "seven"). Neural networks need fixed-size inputs, so we pad shorter
-   utterances with zeros to match the longest one.
-
-4. WHAT IS AN AUTOENCODER?
-   Intuitive: Imagine compressing a photo to a tiny thumbnail and then trying
-   to recreate the original. The thumbnail is the "latent vector" — a compact
-   summary that keeps the most important information.
-   Technical: An autoencoder is a neural network with two halves:
-     • Encoder: maps the (large) input X  →  a small latent vector Z
-     • Decoder: maps Z  →  a reconstruction X'
-   It is trained to minimise MSE(X, X'), forcing the bottleneck Z to capture
-   the essential structure of the input.
-
-5. WHY USE THE ENCODER OUTPUT FOR CLASSIFICATION?
-   The latent vector Z is a learned, compressed representation of the whole
-   utterance. It discards noise and irrelevant variation while keeping
-   digit-specific patterns. Classifying on Z is therefore more robust
-   than classifying on the raw (or simply averaged) features.
-
 =============================================================================
 """
 
@@ -67,15 +25,15 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 
 # ---------------------------------------------------------------------------
-# Hyperparameters (easy to tweak in one place)
+# Hyperparameters 
 # ---------------------------------------------------------------------------
-N_MFCC       = 30       # increased from 13 → captures more spectral detail
+N_MFCC       = 30       # captures more spectral detail
 FRAME_MS     = 15       # frame length in milliseconds
 HOP_MS       = 10       # hop (step) between frames in ms
 LATENT_DIM   = 256      # autoencoder bottleneck size
 AE_EPOCHS    = 500      # autoencoder training epochs
 AE_LR        = 1e-3     # autoencoder learning rate
-CLS_EPOCHS   = 150      # classifier training epochs (increased for convergence)
+CLS_EPOCHS   = 150      # classifier training epochs
 CLS_LR       = 1e-3     # classifier learning rate
 BATCH_SIZE   = 32       # mini-batch size
 NUM_CLASSES  = 10       # digits 0–9
@@ -171,10 +129,6 @@ def extract_all_mfccs(file_paths):
 
 def compute_summary_features(mfcc_list):
     """
-    For each utterance, compute the average frame enriched with
-    delta (velocity) and delta-delta (acceleration) coefficients.
-    Uses both mean and std across frames for richer representation.
-
     Parameters
     ----------
     mfcc_list : list of np.ndarray, each (n_mfcc, n_frames_i)

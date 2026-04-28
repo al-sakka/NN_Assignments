@@ -277,18 +277,11 @@ $30 \times 81 = 2{,}430$ dimensions.
 % ------------------------------------------
 \subsection{Baseline: Summary Features + SVM}
 
-The baseline compresses each utterance into a \textbf{180-D summary vector}:
-\[
-    \mathbf{x}_{\text{summary}} = \big[\,\mu(\text{MFCC}),\;\sigma(\text{MFCC}),\;
-    \mu(\Delta),\;\sigma(\Delta),\;
-    \mu(\Delta^2),\;\sigma(\Delta^2)\,\big]
-    \;\in\;\mathbb{R}^{180}
-\]
-where $\mu$ and $\sigma$ denote the mean and standard deviation across all frames.
-This discards temporal ordering but retains global spectral statistics.
-
-An \textbf{SVM} with RBF kernel is trained via \texttt{GridSearchCV} (5-fold CV) over
-$C \in \{1, 10, 100, 1000\}$ and $\gamma \in \{\text{scale}, 0.01, 0.001\}$.
+The baseline extracts frame-level MFCC, delta, and delta-delta coefficients from each
+utterance and summarises them into a fixed-length feature vector by computing global
+statistics (mean and standard deviation) across all frames.  This collapses the
+variable-length temporal signal into a compact representation that captures the
+average spectral characteristics of each digit while discarding frame ordering.
 
 % ------------------------------------------
 \subsection{Autoencoder Approach}
@@ -299,7 +292,7 @@ The supervised autoencoder processes the full flattened utterance ($\mathbb{R}^{
 and consists of:
 
 \begin{itemize}
-    \item \textbf{Encoder:} $2430 \to 1024 \to 512 \to 256$ (each with BatchNorm + ReLU)
+    \item \textbf{Encoder:} $2430 \to 1024 \to 512 \to 256$
     \item \textbf{Decoder:} $256 \to 512 \to 1024 \to 2430$
     \item \textbf{Classifier head:} Linear($256 \to 10$) branching from the latent layer
 \end{itemize}
@@ -319,10 +312,6 @@ with $\lambda = 2.0$ to emphasise classification.
 $\sigma = 0.05$) expand the training set from 1{,}200 to \textbf{4{,}800 samples}.
 
 Training runs for \textbf{500 epochs} with Adam ($\text{lr} = 10^{-3}$), batch size~32.
-The classification loss $\mathcal{L}_{\text{cls}}$ is the cross-entropy loss of the
-classifier head attached to the latent layer; it drops to $\approx 0$ by epoch~120,
-indicating perfect classification on training data.
-The reconstruction loss continues to decrease, reaching $\approx 0.073$ by epoch~500.
 
 \subsubsection{Classification Strategies}
 
@@ -346,36 +335,15 @@ Three strategies are evaluated on the test set:
 \toprule
 \textbf{Method} & \textbf{Accuracy\,(\%)} & \textbf{Train Time\,(s)} & \textbf{Test Time\,(ms)} \\
 \midrule
-Baseline (Summary + SVM)        & 70.00  & 10.5  & 60.2  \\
-AE Classifier Head              & 86.00  & \multirow{3}{*}{2244.1} & \multirow{3}{*}{92.9}    \\
-AE Latent + SVM                 & 89.33  &       &     \\
-\textbf{AE Hybrid + SVM (best)} & \textbf{90.67} &  &     \\
+Baseline (Summary + SVM)        & 70.00  & 10.5   & 60.2  \\
+AE Classifier Head              & 86.00  & 2225.2 & 15.3  \\
+AE Latent + SVM                 & 89.33  & 2244.1 & 85.6  \\
+\textbf{AE Hybrid + SVM (best)} & \textbf{90.67} & 2255.6 & 92.9 \\
 \bottomrule
 \end{tabular}
 \caption{Problem~4: Accuracy comparison of baseline vs.\ autoencoder-based strategies.
          AE training time includes 500 epochs of AE training plus SVM GridSearchCV.}
 \label{tab:prob4_results}
-\end{table}
-
-\begin{table}[H]
-\centering
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l l}
-\toprule
-\textbf{Hyperparameter} & \textbf{Value} \\
-\midrule
-MFCCs                & 30 coefficients \\
-Frame / Hop          & 15\,ms / 10\,ms \\
-Latent dimension     & 256 \\
-AE epochs            & 500 \\
-Augmentation         & 3 noisy copies ($\sigma=0.05$) \\
-Loss weight ($\lambda$) & 2.0 \\
-SVM kernel           & RBF \\
-Best SVM params      & $C=1$, $\gamma=\text{scale}$ \\
-\bottomrule
-\end{tabular}
-\caption{Problem~4: Key hyperparameters.}
-\label{tab:prob4_params}
 \end{table}
 
 % ------------------------------------------
@@ -395,22 +363,7 @@ learns a 256-D latent code that captures both \textbf{spectral content} and
 \subsubsection{Hybrid Features}
 
 The best strategy combines the autoencoder latent vector with the summary features
-(each independently standardised).  This works because:
-\begin{itemize}
-    \item The latent vector captures temporal patterns the summary misses.
-    \item The summary features capture global statistics (mean/std of deltas)
-          that complement the AE's learned representation.
-    \item Separate standardisation prevents one feature set from dominating due
-          to scale differences.
-\end{itemize}
-
-\subsubsection{Supervised AE Joint Loss}
-
-Adding the classification loss ($\lambda = 2.0$) to the reconstruction loss
-\textbf{shapes the latent space to be class-discriminative}, not just
-reconstruction-optimal.  The classification loss drops to zero on training
-data by epoch~120, while reconstruction loss continues to decrease ---
-the model simultaneously learns to reconstruct and classify.
+(each independently standardised).
 
 \subsubsection{Data Augmentation}
 
