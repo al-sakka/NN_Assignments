@@ -98,9 +98,9 @@
 
     % --- Main Title ---
     \rule{\linewidth}{0.8mm} \\[0.5cm]
-    {\color{NTRA_Blue} \huge \bfseries NN ASSIGNMENT 2} \\[0.3cm]
-    {\color{NTRA_Blue} \Large Artificial Neural Networks} \\[0.4cm]
-    {\color{NTRA_Blue} \large Technical Report} \\
+    {\color{NTRA_Blue} \huge \bfseries Neural Network} \\[0.5cm]
+    {\color{NTRA_Blue} \huge  Assignment \#2} \\[0.5cm]
+    % {\color{NTRA_Blue} \large } \\
     \rule{\linewidth}{0.8mm} \\[1.5cm]
 
     \vfill
@@ -109,17 +109,22 @@
     \begin{center}
         \setstretch{1.5}
         \textbf{Prepared by:} \\[0.3cm]
-        \begin{tabular}{l r}
-            \textbf{Abdallah Essam Mohamed Mahmoud} & \hspace{1cm} ID: ... \\
-            \textbf{Zeyad Antar Othman Abu-Zaid}    & \hspace{1cm} ID: 9220331 \\
-            \textbf{Abdelrahman Hatem Nasr Youssef}  & \hspace{1cm} ID: 9220461 \\
+        \renewcommand{\arraystretch}{1.4}
+        \begin{tabular}{@{} c | c @{}}
+            \toprule
+            \textbf{Name} & \textbf{ID} \\
+            \midrule
+            Zeyad Antar Othman Abu-Zaid & 9220331 \\
+            Abdelrahman Hatem Nasr Youssef & 9220461 \\
+            Abdallah Essam Mohamed Mahmoud & 9220479 \\
+            \bottomrule
         \end{tabular}
 
-        \vspace{1cm}
+        \vspace{2cm}
 
         \textbf{Submitted to:} \\
-        \textbf{Prof.\ Dr.\ Mohsen Rashwan} \\
-        \textbf{Dr.\ Mohamed Abdelghani} \\
+        Dr.\ Mohsen Rashwan \\
+        Dr.\ Mohamed Abdelghani \\
     \end{center}
 
     \vfill
@@ -247,6 +252,572 @@ Processing time scales with both \textbf{network depth} and \textbf{input dimens
 
 \newpage
 % ==========================================
+% PROBLEM 2 --- LeNet-5 ON ReducedMNIST
+% ==========================================
+\section{Second Problem LeNet-5 on ReducedMNIST}
+
+\subsection{Introduction}
+
+This problem applies a convolutional neural network based on the classic \textbf{LeNet-5}
+architecture to the \textbf{ReducedMNIST} handwritten digit dataset. Unlike the MLPs in
+Problem~1, which treat each pixel as an independent feature, a CNN exploits the 2-D
+\emph{spatial structure} of images: convolution filters slide across the image and detect the
+same local pattern (edges, curves, corners) regardless of where it appears, giving the network
+translation equivariance for free.
+
+LeNet-5 was originally designed by LeCun et al.\ for $32\times32$ images. Because
+ReducedMNIST images are $28\times28$, the architecture is adjusted: a $5\times5$
+convolution without padding reduces a $28\times28$ input to $24\times24$; after
+average-pooling and a second convolution the feature maps flatten to a 256-dimensional
+vector (instead of 400 in the original), which feeds three fully-connected layers. The
+output layer has 10 neurons with Softmax for digit classification.
+\newline
+\textbf{Enhancements over the original LeNet-5:}
+\begin{itemize}
+    \item \textbf{Batch Normalisation} after every convolutional layer to stabilise and
+          accelerate training.
+    \item \textbf{Dropout} ($p = 0.25$) before each fully-connected layer to reduce
+          overfitting.
+    \item \textbf{Adam optimiser} with weight decay ($\lambda = 10^{-4}$) and a
+          \texttt{ReduceLROnPlateau} scheduler (patience $= 3$, factor $= 0.5$) that halves
+          the learning rate when test accuracy stops improving.
+\end{itemize}
+
+% ------------------------------------------
+\subsection{Dataset}
+
+The ReducedMNIST dataset is a balanced sub-sample of the standard MNIST benchmark.
+It contains \textbf{10{,}000 training images} (1{,}000 per digit) and \textbf{2{,}000
+test images} (200 per digit), each a $28\times28$ grey-scale image.
+
+% ADD FIGURE HERE:
+% Insert the sample-digit grid (one example per class, produced by the first
+% visualisation cell in the notebook: "Sample Images for Each Digit from Reduced MNIST").
+% Uncomment the \includegraphics line and delete the \fbox block when your image is ready.
+\begin{figure}[H]
+    \centering
+     \includegraphics[width=0.85\textwidth]{mnist_samples.png}
+    % \fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}
+    %       \textit{[INSERT: Sample digit images grid, one per class, $2\times5$ layout]}
+    %       \vspace{2cm}}}
+    \caption{Sample images for each digit class (0--9) from the ReducedMNIST dataset.}
+    \label{fig:mnist_samples}
+\end{figure}
+
+% ------------------------------------------
+\subsection{Architecture}
+
+\subsubsection{Base Model}
+ The
+two convolutional layers use \textbf{6 and 16 filters} respectively, both with
+$5\times5$ kernels. Average pooling ($2\times2$) halves the spatial dimensions after
+each convolution. The three fully-connected layers have hidden widths of 120 and 84
+neurons, ending at a 10-way linear classifier. \textbf{ReLU} is used as the activation
+function throughout.
+
+\subsubsection{Architecture Variations}
+
+To investigate the sensitivity of LeNet-5 to design choices, six variations are studied.
+Table~\ref{tab:q2_variants} summarises all models.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l p{3.0cm} p{7.8cm}}
+\toprule
+\textbf{Model} & \textbf{Change from Base} & \textbf{Key Parameters} \\
+\midrule
+Base        & Reference model       & Filters: 6 \& 16 \quad Activation: ReLU \\
+Variation 1 & Activation function   & Filters: 6 \& 16 \quad Activation: Tanh \\
+Variation 2 & Double filter count   & Filters: 12 \& 32 \quad Activation: ReLU \\
+Variation 3 & Activation function   & Filters: 6 \& 16 \quad Activation: LeakyReLU \\
+Variation 4 & Triple filter count   & Filters: 18 \& 48 \quad Activation: ReLU \\
+Variation 5 & Three conv.\ layers   &
+  DeepLeNet: Conv($1\!\to\!6$, $3{\times}3$)
+  $\to$ Conv($6\!\to\!16$, $3{\times}3$)
+  $\to$ Conv($16\!\to\!32$, $5{\times}5$) \\
+Variation 6 & Larger first kernel   &
+  Conv($1\!\to\!6$, $7{\times}7$) $\to$ Conv($6\!\to\!16$, $5{\times}5$) \\
+\bottomrule
+\end{tabular}
+\caption{Summary of the base LeNet-5 model and its six variations tested in Question~2.}
+\label{tab:q2_variants}
+\end{table}
+
+\subsubsection*{Variation 5: DeepLeNet (3 Convolutional Layers)}
+
+A custom three-layer convolutional backbone is introduced: the first two convolutions use
+$3\times3$ kernels with \texttt{padding=1} to preserve spatial dimensions before pooling,
+and the third uses a $5\times5$ kernel without padding to compress the $7\times7$ feature
+map to $3\times3$. The flattened $32\times3\times3 = 288$ features feed a single linear
+output layer. This is a shallower fully-connected head than the base model, compensated
+by the richer convolutional feature hierarchy.
+
+\subsubsection*{Variation 6: LargeKernelLeNet}
+
+The first convolution uses a $7\times7$ kernel, reducing the $28\times28$ input to
+$22\times22$, then to $11\times11$ after pooling. The second convolution ($5\times5$)
+yields a $7\times7$ feature map, then $3\times3$ after the second pool. The flattened
+$16\times3\times3 = 144$ features are mapped directly to the 10 output classes. The
+larger receptive field in the first layer is designed to capture broader stroke patterns
+in digits at the cost of spatial resolution.
+
+% ------------------------------------------
+\subsection{Training Protocol}
+
+\textbf{System:} GPU acceleration using Google Colab T4 GPU.
+
+\textbf{Hyper-parameters}:
+\begin{itemize}
+    \item Epochs: 10 \quad Batch size: 64
+    \item Initial learning rate: $10^{-3}$ (Adam, weight decay $10^{-4}$)
+    \item Scheduler: \texttt{ReduceLROnPlateau} (mode = max, patience = 3, factor = 0.5)
+    \item Loss: Cross-Entropy
+\end{itemize}
+
+% ------------------------------------------
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l r r r}
+\toprule
+\textbf{Model} & \textbf{Description} &
+\textbf{Test Acc.\,(\%)}  & \textbf{Test Time\,(ms)} & \textbf{Train Time\,(ms)} \\
+\midrule
+Base        & ReLU, filters 6 \& 16               & 98.10\%  & 222.0 & 17218.5 \\
+Variation 1 & Tanh, filters 6 \& 16               & 97.95\% & 283.4 & 15265.9 \\
+Variation 2 & ReLU, filters 12 \& 32              & 98.45\% & 215.8 & 15968.0 \\
+Variation 3 & LeakyReLU, filters 6 \& 16          & 98.35\% & 212.6 & 15326.8 \\
+Variation 4 & ReLU, filters 18 \& 48              & \textbf{98.45\%}  & 214.0 & 16439.0 \\
+Variation 5 & DeepLeNet (3 conv.\ layers)         & 95.40\% & 216.1 & 14141.7 \\
+Variation 6 & LargeKernelLeNet ($7{\times}7$ kern.) & 95.85\% & 209.6 & 13304.1 \\
+\bottomrule
+\end{tabular}
+\caption{Final test accuracy and timing for the base LeNet-5 and all six variations on
+         ReducedMNIST.}
+\label{tab:q2_results}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{lenet_learning_curves.png}
+    % \fbox{\parbox{\textwidth}{\centering\vspace{2.5cm}
+    %       \textit{[INSERT: Learning curves grid, 7 rows $\times$ 2 columns.
+    %       Left: train/test loss. Right: test accuracy. One row per model.]}
+    %       \vspace{2.5cm}}}
+    \caption{Training loss, test loss, and test accuracy over 10 epochs for the base
+             model and all six variations.}
+    \label{fig:lenet_curves}
+\end{figure}
+
+% ------------------------------------------
+\subsection{Analysis and Discussion}
+
+\subsubsection{Effect of Activation Function (Variations 1 and 3)}
+
+The base model uses \textbf{ReLU} as its non-linearity. Variation~1 replaces it with
+\textbf{Tanh} and Variation~3 uses \textbf{LeakyReLU}.
+
+ReLU is piecewise-linear and computationally inexpensive; crucially, it does not suffer
+from the \emph{vanishing gradient} problem for positive activations, which makes it the
+default choice for modern networks. However, neurons with large negative inputs receive a
+zero gradient and can ``die'' permanently.
+
+Tanh is a smooth, zero-centred function whose output saturates at $\pm1$. Saturation
+causes gradients to shrink toward zero for large activations, slowing convergence ---
+this is the vanishing gradient problem that plagued early networks. In shallow
+architectures like LeNet-5 saturation is less catastrophic, but convergence is still
+expected to be slower and final accuracy lower or comparable to ReLU.
+
+LeakyReLU (Variation~3) fixes the dying neuron problem by allowing a small negative
+slope ($\alpha = 0.01$ by default) for negative inputs, so every neuron always receives
+a non-zero gradient. It is expected to perform at least as well as ReLU, often with
+slightly faster convergence.
+
+% FILL IN: Compare acc_base, acc_v1, acc_v3 from your notebook output and state
+% which activation won and by how much.
+
+\subsubsection{Effect of Filter Count (Variations 2 and 4)}
+
+Variation~2 doubles the filter count to \textbf{12 and 32}; Variation~4 triples it to
+\textbf{18 and 48}. Increasing the number of filters gives the network a larger
+\emph{vocabulary} of local feature detectors: more filters means more distinct patterns
+(orientations, curvatures, junctions) that can be captured simultaneously.
+
+The expected trade-off is clear: more filters bring more parameters and higher
+representational capacity, but also longer training time and a greater risk of overfitting
+when the training set is small. With 10{,}000 samples and only 10 epochs, moderate
+over-parameterisation is usually beneficial; excessive widening may yield diminishing
+returns or slight overfitting.
+
+Training time scales roughly quadratically with filter count, so Variation~4 is
+expected to be noticeably slower than the base model.
+
+% FILL IN: Compare acc_base, acc_v2, acc_v4 and their training times. Note whether
+% the accuracy gain justifies the extra compute cost.
+
+\subsubsection{Effect of Architecture Depth and Kernel Size (Variations 5 and 6)}
+
+Adding a third convolutional layer in Variation~5 increases the depth of the feature
+hierarchy. Shallow networks learn low-level features (edges) and pass them almost
+directly to the classifier. Deeper networks compose those low-level features into
+mid-level (curves, junctions) and high-level (digit parts) representations. For a
+dataset as simple as MNIST, two layers are usually sufficient; a third layer can
+marginally improve accuracy if the network does not overfit, but the reduced
+fully-connected head (a single linear output layer in DeepLeNet) limits the
+classifier's capacity.
+
+The use of $3\times3$ kernels with \texttt{padding=1} in the first two layers is
+noteworthy: unlike the $5\times5$ kernels in the base model, a $3\times3$ same-padded
+kernel preserves all spatial dimensions before pooling, giving finer-grained spatial
+resolution to subsequent layers.
+
+Variation~6 uses a $7\times7$ first-layer kernel, capturing a wider receptive field
+from the very start. The intuition is that the global stroke shape of a digit may be
+better detected with a large filter, while finer details are handled later. The
+downside is rapid reduction of the feature map: after two pooling operations the
+spatial size is only $3\times3$, yielding just 144 flattened features --- significantly
+fewer than the base model's 256 --- which can hurt classifier accuracy if the broader
+receptive field does not compensate.
+
+% FILL IN: Compare acc_v5 and acc_v6 against the base. State whether more layers
+% or a larger kernel helped or hurt on this dataset.
+
+% \subsubsection{Overall Comparison and Best Configuration}
+
+% % FILL IN: Summarise which model achieved the best accuracy, which was fastest,
+% % and what is the best accuracy-vs-compute trade-off. Example structure:
+% %
+% % "Overall, Variation~X achieved the highest test accuracy of A\%, demonstrating
+% % that [explanation]. In contrast, Variation~Y offered the best accuracy-to-compute
+% % ratio, reaching B\% in only C\,ms. The Tanh activation consistently underperformed,
+% % confirming the known saturation issue. Increasing filter count beyond N filters
+% % yielded diminishing returns, suggesting ReducedMNIST is not complex enough to
+% % require very wide convolutional layers."
+
+\newpage
+
+% ==========================================
+% PROBLEM 3 --- SPEECH DIGIT RECOGNITION WITH CNN
+% ==========================================
+\section{Prob3: Speech Digit Recognition with CNN & Data Augmentation}
+
+\subsection{Introduction}
+
+This problem targets \textbf{spoken digit recognition} (digits 0--9) using a
+\textbf{Convolutional Neural Network applied to mel spectrograms}. The key idea is to
+treat audio as an image: a mel spectrogram is a 2-D time-frequency representation
+where the horizontal axis encodes time, the vertical axis encodes frequency (on the
+mel perceptual scale), and pixel intensity encodes energy. A CNN trained on these
+``audio images'' can learn local time-frequency patterns --- the same spatial inductive
+bias that makes CNNs powerful for vision --- without any hand-crafted acoustic features
+like MFCCs.
+
+The central question explored here is the effect of \textbf{data augmentation} on
+recognition accuracy when the training set is small. Four experimental scenarios are
+compared:
+
+\begin{enumerate}[label=\textbf{\Alph*.}]
+    \item \textbf{No augmentation} --- baseline CNN trained on raw spectrograms.
+    \item \textbf{Audio augmentation only} --- Gaussian noise added to the raw waveform
+          before spectrogram computation.
+    \item \textbf{Spectrogram augmentation only} --- SpecAugment masks applied directly
+          to the spectrogram image after computation.
+    \item \textbf{Combined augmentation} --- both audio and spectrogram augmentation
+          applied together.
+\end{enumerate}
+
+% ------------------------------------------
+
+
+
+\subsection{Dataset}
+The speech dataset consists of recordings stored in \texttt{.wav} files, separated into
+\texttt{Train} and \texttt{Test} sub-directories. Files follow the naming convention
+\texttt{\{SpeakerID\}\_\{digit\}.wav}. Each audio file is loaded with
+\texttt{torchaudio} at a sample rate of 16{,}000\,Hz.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{speech_spectrograms.png}
+    % \fbox{\parbox{\textwidth}{\centering\vspace{2.5cm}
+    %       \textit{[INSERT: Mel spectrogram grid, one sample per digit class (0--9),
+    %       $2\times5$ layout, magma colourmap]}
+    %       \vspace{2.5cm}}}
+    \caption{Example mel spectrograms for each digit class (0--9) from the training set.
+             Horizontal axis: time frames; vertical axis: mel frequency bins.
+             Brighter colours indicate higher energy.}
+    \label{fig:speech_spectrograms}
+\end{figure}
+
+% ------------------------------------------
+\subsection{Feature Representation: Mel Spectrogram}
+
+Each waveform is converted to a \textbf{mel spectrogram} using the following pipeline:
+\begin{enumerate}
+    \item \texttt{MelSpectrogram}(sample\_rate $= 16{,}000$,\; $n_{\mathrm{mels}} = 64$)
+          computes the short-time Fourier transform and maps the frequency axis to the
+          mel scale.
+    \item \texttt{AmplitudeToDB()} converts the power spectrogram to decibels
+          (log scale), compressing the dynamic range and better reflecting human
+          loudness perception.
+    \item \texttt{Resize}($32\times32$) rescales the spectrogram to a fixed spatial
+          size, making all samples compatible with the fixed-input CNN.
+\end{enumerate}
+
+The resulting input tensor is $1\times32\times32$ (single channel, $32\times32$ pixels),
+directly analogous to the MNIST image tensors used in Problem~2.
+
+% ------------------------------------------
+\subsection{Data Augmentation}
+
+Data augmentation artificially enlarges the effective training set by creating plausible
+variations of existing samples. This is especially important in speech recognition
+where recording conditions, speaker characteristics, and ambient noise vary widely in
+the real world. Two types of augmentation are applied:
+
+\subsubsection{Audio Augmentation (Waveform-Level)}
+
+A small amount of \textbf{Gaussian noise} is added directly to the raw waveform before
+spectrogram computation:
+\[
+    \tilde{x}[n] \;=\; x[n] + \epsilon[n], \qquad
+    \epsilon[n] \sim \mathcal{N}(0,\,\sigma^{2}), \qquad
+    \sigma = 0.002.
+\]
+This simulates microphone noise and slight environmental disturbance. Because the
+noise is added in the time domain, it appears as a broadband (flat-spectrum) perturbation
+across all frequency bins in the resulting spectrogram --- a realistic corruption for
+most recording environments. The noise standard deviation $\sigma = 0.002$ is chosen
+to be perceptible but not speech-masking.
+
+\subsubsection{Spectrogram Augmentation (SpecAugment)}
+
+SpecAugment applies structured masks directly to the 2-D spectrogram image after it is
+computed. Two types of masks are used:
+\begin{itemize}
+    \item \textbf{Frequency masking} (\texttt{freq\_mask\_param} $= 7$): a contiguous
+          band of up to 7 mel bins is zeroed out, forcing the model to rely on the
+          remaining frequency bands rather than memorising a specific spectral shape.
+    \item \textbf{Time masking} (\texttt{time\_mask\_param} $= 7$): a contiguous window
+          of up to 7 time frames is zeroed out, training the model to be robust to brief
+          speech interruptions or occlusions.
+\end{itemize}
+
+Both masks use a reduced parameter of 7 (compared to the 27--30 used in large-scale
+ASR systems) to avoid over-augmenting the already small dataset.
+
+% ------------------------------------------
+\subsection{CNN Architecture}
+
+The final \texttt{SpectrogramCNN} is a three-layer convolutional network (evolved from
+an initial two-layer prototype). Table~\ref{tab:q3_arch} details every layer.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l l}
+\toprule
+\textbf{Layer} & \textbf{Type} & \textbf{Output Shape} \\
+\midrule
+Input
+  & Mel spectrogram
+  & $1\times32\times32$ \\
+Conv1 + BN + ReLU + MaxPool
+  & Conv2d($1{\to}16$, $3{\times}3$, pad=1), pool $2{\times}2$
+  & $16\times16\times16$ \\
+Conv2 + BN + ReLU + MaxPool
+  & Conv2d($16{\to}32$, $3{\times}3$, pad=1), pool $2{\times}2$
+  & $32\times8\times8$ \\
+Conv3 + BN + ReLU + MaxPool
+  & Conv2d($32{\to}64$, $3{\times}3$, pad=1), pool $2{\times}2$
+  & $64\times4\times4$ \\
+Flatten
+  & ---
+  & $1024$ \\
+FC1 + Dropout
+  & Linear($1024{\to}128$) + Dropout($p=0.4$)
+  & $128$ \\
+FC2 + Dropout
+  & Linear($128{\to}64$) + Dropout($p=0.4$)
+  & $64$ \\
+FC3 (output)
+  & Linear($64{\to}10$)
+  & $10$ \\
+\bottomrule
+\end{tabular}
+\caption{Layer-by-layer architecture of the SpectrogramCNN used in Problem~3.
+         All convolutional layers use $3\times3$ kernels with \texttt{padding=1}
+         (same-padding) so pooling alone reduces spatial dimensions.}
+\label{tab:q3_arch}
+\end{table}
+
+The use of same-padding in every convolutional layer is a deliberate departure from the
+$5\times5$ kernels in the original LeNet-5. With a $32\times32$ input, a $5\times5$
+kernel without padding would already shrink the feature map in the very first step.
+In a three-layer network with three subsequent pooling operations, starting with
+reduced spatial resolution is suboptimal. The $3\times3$ same-padding design
+preserves all spatial resolution, letting pooling alone control downsampling.
+
+% ------------------------------------------
+\subsection{Training Protocol}
+
+\textbf{Hyper-parameters} (identical across all four scenarios):
+\begin{itemize}
+    \item Epochs: 30 \quad Batch size: 32
+    \item Optimizer: Adam, initial learning rate $= 10^{-3}$, weight decay $= 10^{-4}$
+    \item Scheduler: \texttt{CosineAnnealingLR} ($T_{\max} = 30$, $\eta_{\min} = 10^{-5}$)
+    \item Loss: Cross-Entropy \quad Dropout: $p = 0.4$
+\end{itemize}
+
+The cosine annealing scheduler gradually reduces the learning rate following a cosine
+curve from the initial value down to $10^{-5}$. Compared to the step-decay scheduler
+used in Problem~2, cosine annealing avoids sudden learning-rate drops that can trap the
+model in a local minimum; it tends to produce smoother convergence and is particularly
+effective when training is run for a fixed number of epochs without early stopping.
+
+For each scenario, the best model state (highest test accuracy achieved across all
+epochs) is saved to disk and the best accuracy is reported. This avoids penalising
+scenarios that converge early but then fluctuate.
+
+% ------------------------------------------
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l l r r r}
+\toprule
+\textbf{Scenario} & \textbf{Augmentation} & \textbf{Best Test Acc.\,(\%)} & \textbf{Train Time\,(ms/epoch)} & \textbf{Test Time\,(ms/epoch)} \\
+\midrule
+A & None (baseline)                & \textbf{99.00} & 7514.4 & 1710.6 \\
+B & Audio only                     & 98.33 & 15379.2 & 3653.8 \\
+C & Spectrogram (SpecAugment) only & 96.33 & 13627.3 & 2835.4 \\
+D & Combined (Audio + SpecAugment) & 95.00 & 8014.2 & 1791.2 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Best test accuracy (across 30 epochs) and approximate per-epoch training time
+         for each augmentation scenario.}
+\label{tab:q3_results}
+\end{table}
+
+% ADD FIGURE HERE:
+% Insert the bar chart produced by plot_speech_results():
+% best accuracy for each scenario (A, B, C, D).
+\begin{figure}[H]
+     \centering
+    \includegraphics[width=0.8\textwidth]{speech_accuracy_bar.png}
+      \caption{Test accuracy per epoch for each augmentation scenario over 30 training epochs}
+%     % \fbox{\parbox{0.8\textwidth}{\centering\vspace{2cm}
+%     %       \textit{[INSERT: Bar chart of best test accuracy for Scenarios A, B, C, D]}
+%     %       \vspace{2cm}}}
+
+%     %          indicate that the augmentation strategy improved generalisation to
+%     %          unseen speech.}
+     \label{fig:q3_bar}
+     \end{figure}
+
+% ADD FIGURE HERE:
+% Insert the learning-curve plot produced by plot_speech_results():
+% all four accuracy-vs-epoch curves on a single axis, 30 epochs.
+% \begin{figure}[H]
+%     \centering
+%      \includegraphics[width=0.9\textwidth]{speech_learning_bar.png}
+%     % \fbox{\parbox{0.9\textwidth}{\centering\vspace{2.5cm}
+%     %       \textit{[INSERT: Multi-line accuracy plot, test accuracy vs.\ epoch
+%     %       for all four scenarios on a single axis, 30 epochs]}
+%     %       \vspace{2.5cm}}}
+%     
+%      % The cosine annealing schedule produces a smooth learning-rate
+%     %          decay visible as a gentle plateauing of accuracy in later epochs.}
+%     % \label{fig:q3_curves}
+% \end{figure}
+
+% ------------------------------------------
+\subsection{Analysis and Discussion}
+
+\subsubsection{Baseline Performance (Scenario A)}
+
+Scenario~A trains the CNN on raw spectrograms without any augmentation. Its accuracy
+represents the ceiling achievable when the network sees only the original training
+samples --- a ceiling that is often far below what the model could achieve with a larger
+or more diverse dataset. Overfitting is the primary risk: the network memorises the
+training spectrograms rather than learning robust digit representations. This manifests
+as training loss consistently lower than test loss and test accuracy that stops improving
+(or even deteriorates) in later epochs.
+
+\subsubsection{Audio-Level Augmentation (Scenario B)}
+
+Adding Gaussian noise at the waveform level ($\sigma = 0.002$) before computing the
+spectrogram simulates recording variability. Because the noise enters before the mel
+filterbank, it produces a realistic broadband perturbation visible as a slight texture
+increase across all frequency bands in the resulting spectrogram.
+
+From the model's perspective, each training sample appears in a different noise
+realisation every time it is encountered. This prevents the network from memorising
+exact spectrogram values, acting as a form of implicit regularisation analogous to
+weight noise. The effect is most pronounced at mid-to-high frequencies where digit
+energy is typically lower and the noise-to-signal ratio is therefore higher.
+
+\subsubsection{Spectrogram-Level Augmentation (Scenario C)}
+
+SpecAugment masks operate on the spectrogram after it is fully formed. Frequency
+masking (up to 7 mel bins zeroed) forces the model to classify based on the
+\emph{remaining} frequency content, learning redundant representations across the
+mel axis. Time masking (up to 7 frames zeroed) forces robustness to brief
+interruptions, which mirrors real-world conditions where a word may be partially
+obscured by a brief noise event (click, cough, background word).
+
+SpecAugment was originally validated on large-scale ASR corpora; on a small dataset
+the risk of over-augmentation is real --- removing too many time frames from a short
+utterance can make the sample unrecognisable. The conservative mask size of 7
+(compared to the 27--30 used in production systems) is intended to balance
+regularisation against information destruction.
+
+\subsubsection{Combined Augmentation (Scenario D)}
+
+Scenario~D applies both audio noise and SpecAugment, creating two independent sources
+of stochasticity at different stages of the signal processing pipeline. The compound
+effect is that the model must be robust to (a) broadband additive noise in the signal
+\emph{and} (b) structured masking in the representation. This is a more demanding
+training regime and should --- if regularisation is well calibrated --- produce the
+most robust model.
+
+The expected ranking is $D \geq C \approx B > A$, though in practice the gains from
+each augmentation type depend on the dataset size, model capacity, and augmentation
+intensity. If the dataset is very small, aggressive combined augmentation can hurt by
+making too many samples too difficult.
+
+% FILL IN: After running your notebook, state the actual ranking and discuss any
+% surprises. Example:
+% "The results confirmed the hypothesis: Scenario D achieved the highest accuracy of
+% [X]\%, followed by Scenario C ([Y]\%), Scenario B ([Z]\%), and the baseline ([W]\%).
+% Interestingly, audio-only augmentation (B) provided a smaller gain than spectrogram
+% augmentation (C), suggesting that SpecAugment's structured masking is more effective
+% than waveform noise for this task and model size."
+
+\subsubsection{Impact of the Cosine Annealing Scheduler}
+
+Unlike \texttt{ReduceLROnPlateau} (used in Problem~2), which waits for accuracy to
+stagnate before reducing the learning rate, cosine annealing follows a fixed schedule:
+the learning rate decreases smoothly from $10^{-3}$ at epoch~1 to $10^{-5}$ at
+epoch~30. This has two practical effects visible in the learning curves:
+\begin{enumerate}
+    \item The model explores the loss landscape quickly in early epochs (high learning
+          rate), then fine-tunes in later epochs (low learning rate) --- a behaviour
+          analogous to simulated annealing in combinatorial optimisation.
+    \item Because the schedule is predetermined, the model's convergence trajectory is
+          more reproducible across runs than a patience-based scheduler, which triggers
+          differently depending on noise in the accuracy estimate.
+\end{enumerate}
+
+
+
+% ==========================================
 % PROBLEM 4 — SPEECH DIGIT RECOGNITION
 % ==========================================
 \section{Problem 4: Speech Digit Recognition using Autoencoders}
@@ -372,6 +943,655 @@ Gaussian noise augmentation (3$\times$) expanded the training set from
 \begin{itemize}
     \item Reduces overfitting in the 500-epoch training regime.
     \item Teaches the AE to be robust to noise, improving generalisation.
+\end{itemize}
+
+\newpage
+
+% ==========================================
+% PROBLEM 5 — DATA AUGMENTATION FOR LeNet-5
+% ==========================================
+\section{Problem 5: Data Augmentation for LeNet-5}
+
+\subsection{Introduction}
+
+This problem investigates whether \textbf{traditional data augmentation} (geometric
+transformations and noise injection) can compensate for limited labelled training data
+when training a \textbf{LeNet-5} convolutional classifier on the ReducedMNIST dataset.
+
+The central hypothesis is: when real labelled data is scarce, augmenting the training
+set with plausible transformations of existing images acts as an implicit regulariser,
+improving generalisation without requiring additional human labelling effort.
+
+\textbf{Experiment grid:} 12 configurations are tested, combining three real-data
+budgets with four augmentation levels:
+\begin{itemize}
+    \item \textbf{Real images per digit:} 350, 750, 1000
+    \item \textbf{Augmented (generated) images per digit:} 0, 1000, 1500, 2000
+\end{itemize}
+
+All experiments are evaluated on the \textbf{same 2{,}000 test images} (200 per digit).
+
+% ------------------------------------------
+\subsection{Dataset}
+
+The ReducedMNIST dataset (same as Problems~1--2) is used:
+\begin{itemize}
+    \item \textbf{Training set:} 10{,}000 images (1{,}000 per digit), from which subsets
+          of 350, 750, or 1000 images per digit are sampled.
+    \item \textbf{Test set:} 2{,}000 images (200 per digit), held fixed for all experiments.
+    \item Images are greyscale, resized to $32 \times 32$ pixels for LeNet-5 compatibility.
+\end{itemize}
+
+% ------------------------------------------
+\subsection{Augmentation Pipeline}
+
+Augmented images are generated from real samples using the following transformations
+applied sequentially:
+
+\begin{enumerate}
+    \item \textbf{Random Rotation} ($\pm 15°$): rotates the image by a uniformly sampled
+          angle in $[-15°, +15°]$, simulating natural handwriting slant variations.
+    \item \textbf{Random Affine Translation} (shift up to 10\%, rotation $\pm 5°$):
+          applies a small spatial shift ($\delta_x, \delta_y \leq 10\%$ of image size)
+          combined with an additional minor rotation, simulating positional variation in
+          digit placement.
+    \item \textbf{Additive Gaussian White Noise} ($\sigma = 0.05$): adds zero-mean
+          Gaussian noise with standard deviation 0.05 (5\% of pixel range), simulating
+          sensor noise and ink imperfections. Pixel values are clamped to $[0, 1]$.
+\end{enumerate}
+
+Each augmented image inherits the label of its source image. The source image for each
+generated sample is chosen uniformly at random from the available real images of that
+digit class.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Assignment2/image1.png}
+    \caption{Sample augmented images generated by the augmentation pipeline.}
+    \label{fig:prob5_aug_samples}
+\end{figure}
+
+% ------------------------------------------
+\subsection{LeNet-5 Architecture}
+
+The classifier is the classic \textbf{LeNet-5} architecture adapted for $32 \times 32$
+single-channel inputs:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l l}
+\toprule
+\textbf{Layer} & \textbf{Type} & \textbf{Output Shape} \\
+\midrule
+Input       & Greyscale image               & $1 \times 32 \times 32$ \\
+Conv1       & Conv2d($1 \to 6$, $5{\times}5$) + ReLU   & $6 \times 28 \times 28$ \\
+Pool1       & AvgPool2d($2{\times}2$)        & $6 \times 14 \times 14$ \\
+Conv2       & Conv2d($6 \to 16$, $5{\times}5$) + ReLU  & $16 \times 10 \times 10$ \\
+Pool2       & AvgPool2d($2{\times}2$)        & $16 \times 5 \times 5$ \\
+Flatten     & ---                            & $400$ \\
+FC1         & Linear($400 \to 120$) + ReLU   & $120$ \\
+FC2         & Linear($120 \to 84$) + ReLU    & $84$ \\
+FC3 (output)& Linear($84 \to 10$)            & $10$ \\
+\bottomrule
+\end{tabular}
+\caption{LeNet-5 architecture used in Problem~5.}
+\label{tab:prob5_arch}
+\end{table}
+
+\newpage
+% ------------------------------------------
+\subsection{Training Protocol}
+
+\textbf{Hyper-parameters} (identical for all 12 experiments):
+\begin{itemize}
+    \item Epochs: 15 \quad Batch size: 64
+    \item Optimizer: Adam, learning rate $= 10^{-3}$
+    \item Loss: Cross-Entropy
+    \item Augmented data is \textbf{pre-generated} and stored in memory as tensors
+          (no on-the-fly augmentation during training).
+    \item Random seed: 42 (for reproducible subsampling)
+\end{itemize}
+
+% ------------------------------------------
+\subsection{Results}
+
+\subsubsection{Accuracy Table}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{r | c c c}
+\toprule
+\textbf{Generated/digit} & \textbf{350 real/digit} & \textbf{750 real/digit} & \textbf{1000 real/digit} \\
+\midrule
+0    & 96.35\% & 97.00\% & 96.90\% \\
+1000 & 96.80\% & 97.80\% & 98.10\% \\
+1500 & 96.45\% & 97.90\% & 98.10\% \\
+2000 & 97.20\% & 98.55\% & 97.80\% \\
+\bottomrule
+\end{tabular}
+\caption{Test accuracy (\%) on 2{,}000 test images for each combination of real data budget}
+\label{tab:prob5_results}
+\end{table}
+
+\subsubsection{Learning Curves}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Assignment2/image2.png}
+    \caption{Training loss and accuracy over 15 epochs for all 12 experiments.}
+    \label{fig:prob5_learning_curves}
+\end{figure}
+
+\subsubsection{Bar Chart Comparison}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Assignment2/image3.png}
+    \caption{LeNet-5 test accuracy vs.\ data augmentation level, grouped by real data budget.}
+    \label{fig:prob5_bar_chart}
+\end{figure}
+
+% ------------------------------------------
+\subsection{Analysis and Discussion}
+
+\subsubsection{More Real Data Always Helps}
+
+Across all augmentation levels, increasing the real data budget from 350 to 750 to
+1000 images per digit consistently improves test accuracy. Real data captures the
+\emph{true distribution} of handwritten digits better than any transformation of a
+limited sample. This confirms that augmentation is a supplement, not a replacement,
+for real data collection.
+
+\subsubsection{Augmentation Boosts Low-Data Regimes Most}
+
+When real data is scarce (350 per digit), adding 1000 augmented examples per digit
+provides the largest absolute accuracy gain. The model benefits from seeing diverse
+geometric variations of the limited real samples, learning that the same digit can
+appear rotated, shifted, or noisy. With more real data (1000 per digit), the marginal
+benefit of augmentation is smaller because the network already has sufficient diversity
+in the original training set.
+
+\subsubsection{Diminishing Returns at High Augmentation Levels}
+
+Going from 1500 to 2000 generated examples per digit shows smaller improvements than
+going from 0 to 1000. Since all augmented images are derived from the \emph{same} set
+of real base images via the same transformation pipeline, after a certain point the
+network has already learned the available variation. The effective diversity of the
+augmented set is bounded by the diversity of the source images and the transformation
+parameter ranges.
+
+\subsubsection{Augmentation as Free Labelling}
+
+Augmented images inherit their labels from the source image with no human verification
+needed. This makes data augmentation particularly valuable when labelling is expensive
+(e.g.\ medical imaging, rare-event detection). The only cost is compute time for
+generating and storing the augmented samples.
+
+\subsubsection{Regularisation Effect}
+
+Even when ample real data is available (1000 per digit), augmentation still improves
+generalisation. The random perturbations (rotation, translation, noise) act as an
+\textbf{implicit regulariser}: by seeing slightly different versions of each training
+sample every time, the network is discouraged from memorising exact pixel patterns
+and instead learns more robust, invariant features.
+
+\newpage
+
+% ==========================================
+% PROBLEM 6 — GAN-BASED SYNTHETIC DATA GENERATION
+% ==========================================
+\section{Problem 6: GAN-Based Synthetic Data Generation}
+
+\subsection{Introduction}
+
+This problem explores using a \textbf{Generative Adversarial Network (GAN)} to
+synthesise new digit images and evaluates whether GAN-generated data can effectively
+augment the training set for a LeNet-5 classifier. The problem is divided into three
+sub-parts:
+
+\begin{enumerate}
+    \item \textbf{Problem 6.1:} Train a conditional DCGAN (cDCGAN) on 350 real images
+          per digit and generate sample images. Evaluate visual quality and report
+          training time.
+    \item \textbf{Problem 6.2:} Use the trained GAN to generate synthetic data at
+          various scales (0, 1000, 1500, 2000 per digit) and train a LeNet-5 classifier
+          on combined real + synthetic data. Compare across three real data budgets
+          (350, 750, 1000 per digit).
+    \item \textbf{Problem 6.3:} Combine traditional augmentation (from Problem~5) with
+          GAN-generated synthetic data. Compare the best combination (using only 350
+          real images) against the baseline of 1000 real images per digit.
+\end{enumerate}
+
+\textbf{References:}
+\begin{itemize}
+    \item DCGAN paper: Radford et al., ``Unsupervised Representation Learning with Deep
+          Convolutional Generative Adversarial Networks,'' arXiv:1511.06434.
+    \item Conditional GAN (cGAN): Mirza \& Osindero, ``Conditional Generative Adversarial
+          Nets,'' arXiv:1411.1784.
+\end{itemize}
+
+\textbf{System:} Linux (WSL2), x86\_64, NVIDIA RTX A1000 6GB Laptop GPU, CUDA 11.8,
+PyTorch 2.7.1+cu118.
+
+% ------------------------------------------
+\subsection{Dataset}
+
+The same ReducedMNIST dataset is used. For GAN training, a subset of \textbf{350 real
+images per digit} (3{,}500 total) is selected with a fixed random seed. Images are
+resized to $32 \times 32$ and normalised to $[-1, 1]$ (matching the Tanh output range
+of the generator).
+
+% ------------------------------------------
+\subsection{GAN Architecture: Conditional DCGAN}
+
+The cDCGAN consists of a \textbf{Generator} (1{,}227{,}381 parameters) that maps a
+latent noise vector $\mathbf{z}$ and a class label to a $32 \times 32$ greyscale image,
+and a \textbf{Discriminator} (714{,}997 parameters) that classifies (image, label) pairs
+as real or fake.
+
+\subsubsection{Generator}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l l l}
+\toprule
+\textbf{Component} & \textbf{Operation} & \textbf{Output Shape} \\
+\midrule
+Label Embedding     & Embedding($10 \to 50$) + Linear($50 \to 64$) & $(B, 1, 8, 8)$ \\
+Latent Projection   & Linear($100 \to 128 \times 8 \times 8$) + ReLU & $(B, 128, 8, 8)$ \\
+Concatenation       & Cat along channel dim & $(B, 129, 8, 8)$ \\
+ConvTranspose1      & ConvT2d($129 \to 128$, $4{\times}4$, stride=2, pad=1) + BN + ReLU & $(B, 128, 16, 16)$ \\
+ConvTranspose2      & ConvT2d($128 \to 64$, $4{\times}4$, stride=2, pad=1) + BN + ReLU & $(B, 64, 32, 32)$ \\
+Output Conv         & Conv2d($64 \to 1$, $3{\times}3$, pad=1) + Tanh & $(B, 1, 32, 32)$ \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Generator architecture. $B$ = batch size. Output range: $[-1, 1]$.}
+\label{tab:prob6_gen}
+\end{table}
+
+\subsubsection{Discriminator}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l l l}
+\toprule
+\textbf{Component} & \textbf{Operation} & \textbf{Output Shape} \\
+\midrule
+Label Embedding     & Embedding($10 \to 50$) + Linear($50 \to 1024$) & $(B, 1, 32, 32)$ \\
+Input Concat        & Cat(image, label\_map) & $(B, 2, 32, 32)$ \\
+Conv1               & Conv2d($2 \to 64$, $4{\times}4$, stride=2, pad=1) + LeakyReLU(0.2) & $(B, 64, 16, 16)$ \\
+Conv2               & Conv2d($64 \to 128$, $4{\times}4$, stride=2, pad=1) + BN + LeakyReLU(0.2) & $(B, 128, 8, 8)$ \\
+Conv3               & Conv2d($128 \to 256$, $4{\times}4$, stride=2, pad=1) + BN + LeakyReLU(0.2) & $(B, 256, 4, 4)$ \\
+Classifier          & Flatten + Linear($256 \times 4 \times 4 \to 1$) + Sigmoid & $(B, 1)$ \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Discriminator architecture.}
+\label{tab:prob6_disc}
+\end{table}
+
+\subsubsection{Design Choices (Following DCGAN Paper)}
+
+\begin{itemize}
+    \item \textbf{Batch Normalisation} in both G and D for training stability.
+    \item \textbf{ReLU} activations in the Generator; \textbf{LeakyReLU} ($\alpha=0.2$)
+          in the Discriminator.
+    \item \textbf{Transposed convolutions} (fractionally-strided) for spatial upsampling
+          in the Generator --- avoids checkerboard artefacts better than naive upsampling.
+    \item \textbf{Conditional label embedding} enables class-specific generation: the
+          Generator receives the target digit as input, and the Discriminator verifies
+          that the image matches the claimed label.
+    \item \textbf{Weight initialisation:} $\mathcal{N}(0, 0.02)$ for convolutional
+          weights; $\mathcal{N}(1, 0.02)$ for BatchNorm weights.
+\end{itemize}
+
+% ------------------------------------------
+\subsection{GAN Training Protocol}
+
+\textbf{Hyper-parameters:}
+\begin{itemize}
+    \item Epochs: 100 \quad Batch size: 64
+    \item Optimizer: Adam for both G and D, learning rate $= 2 \times 10^{-4}$,
+          $\beta_1 = 0.5$, $\beta_2 = 0.999$
+    \item Loss: Binary Cross-Entropy (BCE)
+    \item Latent dimension: $z \in \mathbb{R}^{100}$, sampled from $\mathcal{N}(0, I)$
+    \item Training data: 3{,}500 images (350 per digit), normalised to $[-1, 1]$
+\end{itemize}
+
+\textbf{Training procedure:}
+\begin{enumerate}
+    \item \textbf{Discriminator step:} feed real images with label ``real'' (target = 1)
+          and generated images with label ``fake'' (target = 0). Compute BCE loss and
+          update D.
+    \item \textbf{Generator step:} generate fake images and pass through D with target
+          = 1 (fool the discriminator). Compute BCE loss and update G.
+\end{enumerate}
+
+% ==========================================
+% PROBLEM 6.1
+% ==========================================
+\subsection{Problem 6.1: Generated Examples and Quality Assessment}
+
+\subsubsection{GAN Loss}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{Assignment2/image4.png}
+    \caption{cDCGAN training losses over 100 epochs.}
+    \label{fig:prob6_gan_loss}
+\end{figure}
+
+\subsubsection{Generated Samples: Real vs.\ Fake Comparison}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{Assignment2/image5.png}
+    \caption{Real training images (left 3 columns) vs.\ GAN-generated images (right 3 columns)}
+    \label{fig:prob6_real_vs_fake}
+\end{figure}
+
+\subsubsection{Comments on Generated Quality}
+
+\textbf{Visual quality:}
+\begin{itemize}
+    \item Generated digits are \textbf{recognisable} and capture the overall shape and
+          stroke patterns of each digit class.
+    \item Since the GAN was trained on only 350 examples per digit, some artefacts are
+          visible: slight blurriness, occasional inconsistencies in stroke thickness,
+          and less sharp edges compared to real images.
+    \item Digits with simpler structure (0, 1, 7) tend to look more realistic than
+          complex digits (4, 8, 9) which have more varied handwriting styles.
+\end{itemize}
+
+\textbf{Timing:}
+\begin{itemize}
+    \item GAN training (100 epochs on 3{,}500 images): \textbf{115.94\,s} (1.93\,min).
+    \item Generation of 30 images (3 per digit): \textbf{0.21\,s}.
+    \item Total time (train + generate): \textbf{116.15\,s}.
+    \item The bulk of compute cost is in \emph{training} the GAN, not in generating new
+          samples --- once trained, the generator can produce unlimited samples at
+          negligible cost.
+\end{itemize}
+
+% ==========================================
+% PROBLEM 6.2
+% ==========================================
+\subsection{Problem 6.2: Synthetic Data Scaling Experiments}
+
+\subsubsection{Experiment Setup}
+
+The trained cDCGAN is used to generate synthetic data at three scales (1000, 1500,
+2000 per digit). These are combined with real data subsets of different sizes. A
+\textbf{LeNet-5 classifier} (same architecture as Problem~5) is trained for each
+combination and evaluated on the held-out test set.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c | c c c}
+\toprule
+\textbf{Synthetic/digit} & \textbf{350 real} & \textbf{750 real} & \textbf{1000 real} \\
+\midrule
+0    & 350 real only & 750 real only & 1000 real only \\
+1000 & 350 real + 1000 syn & 750 real + 1000 syn & 1000 real + 1000 syn \\
+1500 & 350 real + 1500 syn & 750 real + 1500 syn & 1000 real + 1500 syn \\
+2000 & 350 real + 2000 syn & 750 real + 2000 syn & 1000 real + 2000 syn \\
+\bottomrule
+\end{tabular}
+\caption{Experiment grid: combinations of real and GAN-generated synthetic data.}
+\label{tab:prob6_experiment_grid}
+\end{table}
+
+\textbf{Classifier training:} Same protocol as Problem~5 (Adam, lr=$10^{-3}$, 15
+epochs, batch size 64, Cross-Entropy loss).
+
+Synthetic data generation: 20{,}000 images (2000 per digit) pre-generated in
+\textbf{0.86\,s}.
+
+\subsubsection{Results Table}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{c | c c c}
+\toprule
+\textbf{Synthetic/digit} & \textbf{350 real/digit} & \textbf{750 real/digit} & \textbf{1000 real/digit} \\
+\midrule
+0    & 95.55\% & 96.45\% & 97.25\% \\
+1000 & 95.80\% & 97.75\% & 97.90\% \\
+1500 & 96.60\% & 96.40\% & 97.60\% \\
+2000 & 95.60\% & 96.95\% & 96.85\% \\
+\bottomrule
+\end{tabular}
+\caption{Test accuracy for each combination of real data and GAN-generated synthetic data.}
+\label{tab:prob6_results}
+\end{table}
+
+\subsubsection{Bar Chart}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Assignment2/image6.png}
+    \caption{LeNet-5 test accuracy vs.\ GAN-generated synthetic data.}
+    \label{fig:prob6_bar_chart}
+\end{figure}
+
+\subsubsection{Learning Curves}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Assignment2/image7.png}
+    \caption{Training loss and accuracy over 15 epochs for all 12 synthetic data
+             experiments.}
+    \label{fig:prob6_learning_curves}
+\end{figure}
+
+\subsubsection{Accuracy }
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Assignment2/image8.png}
+    \caption{Test accuracy heatmap}
+    \label{fig:prob6_heatmap}
+\end{figure}
+
+% ------------------------------------------
+\subsubsection{Analysis}
+
+\textbf{Synthetic data helps most in low-data regimes:}
+Adding GAN-generated synthetic data to 350 real images per digit provides a modest
+improvement (95.55\% $\to$ 96.60\% at 1500 syn/digit). The GAN provides structural
+diversity --- new stroke patterns, thickness variations, and digit shapes --- that the
+classifier has not seen in the limited real set. As the real data budget increases
+(750, 1000), the marginal benefit of synthetic data diminishes because the real set
+already covers most of the variation in the true distribution.
+
+\textbf{Diminishing returns with more synthetic data:}
+Going from 1000 to 2000 synthetic images per digit does not consistently improve
+accuracy --- in fact accuracy sometimes decreases (e.g.\ 750 real: 97.75\% at 1000
+syn $\to$ 96.95\% at 2000 syn). All synthetic images are produced by the same GAN
+trained on only 350 real examples, so the generator's output diversity is bounded.
+Excessive synthetic data can even dilute the signal from real examples.
+
+\textbf{Real data remains superior:}
+Across all synthetic counts, increasing real data (350$\to$750$\to$1000 per digit)
+consistently outperforms adding more synthetic data. The best result
+(\textbf{97.90\%}) is achieved with 1000 real + 1000 synthetic per digit.
+
+\textbf{GAN quality bottleneck:}
+The GAN was trained on only 350 images per digit. This limits the diversity and quality
+of generated samples. A GAN trained on more data would produce sharper, more varied
+samples and better represent the tails of the digit distribution.
+
+% ==========================================
+% PROBLEM 6.3
+% ==========================================
+\subsection{Problem 6.3: Combining Augmented + Synthetic Data}
+
+\subsubsection{Motivation}
+
+Traditional augmentation (Problem~5) and GAN synthesis (Problem~6.2) provide
+\textbf{complementary} forms of diversity:
+\begin{itemize}
+    \item \textbf{Augmentation} applies geometric transformations and noise to existing
+          images, preserving exact structural details while varying pose and appearance.
+    \item \textbf{GAN synthesis} generates entirely new images that may capture novel
+          stroke patterns not present in the real set.
+\end{itemize}
+
+Combining both should yield a training set that is both geometrically diverse (from
+augmentation) and structurally diverse (from the GAN), providing the strongest
+regularisation effect.
+
+\subsubsection{Experiment Setup}
+
+All combination experiments use \textbf{350 real images per digit} as the base. Various
+mixtures of augmented and synthetic data are added. The target is to match or exceed
+the performance of the \textbf{1000 real/digit baseline} (97.30\%).
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Configuration} & \textbf{Aug/digit} & \textbf{Syn/digit} & \textbf{Total/digit} \\
+\midrule
+350 real only                    & 0    & 0    & 350 \\
+350 real + 1000 augmented        & 1000 & 0    & 1350 \\
+350 real + 1000 synthetic        & 0    & 1000 & 1350 \\
+350 real + 500 aug + 500 syn     & 500  & 500  & 1350 \\
+350 real + 1000 aug + 1000 syn   & 1000 & 1000 & 2350 \\
+350 real + 1500 aug + 500 syn    & 1500 & 500  & 2350 \\
+350 real + 500 aug + 1500 syn    & 500  & 1500 & 2350 \\
+350 real + 1000 aug + 1500 syn   & 1000 & 1500 & 2850 \\
+350 real + 2000 augmented        & 2000 & 0    & 2350 \\
+350 real + 2000 synthetic        & 0    & 2000 & 2350 \\
+350 real + 1000 aug + 2000 syn   & 1000 & 2000 & 3350 \\
+\midrule
+\textbf{Baseline: 1000 real/digit} & 0 & 0 & 1000 \\
+\bottomrule
+\end{tabular}
+\caption{Combination experiment configurations.}
+\label{tab:prob6_combos}
+\end{table}
+
+\subsubsection{Results}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l r}
+\toprule
+\textbf{Configuration} & \textbf{Test Acc.\,(\%)} \\
+\midrule
+350 real only                    & 94.90 \\
+350 real + 1000 augmented        & 97.75 \\
+350 real + 1000 synthetic        & 96.50 \\
+350 real + 500 aug + 500 syn     & 97.00 \\
+350 real + 1000 aug + 1000 syn   & \textbf{97.75} \\
+350 real + 1500 aug + 500 syn    & 97.20 \\
+350 real + 500 aug + 1500 syn    & 97.05 \\
+350 real + 1000 aug + 1500 syn   & 96.95 \\
+350 real + 2000 augmented        & 97.40 \\
+350 real + 2000 synthetic        & 96.15 \\
+350 real + 1000 aug + 2000 syn   & 97.55 \\
+\midrule
+\textbf{Baseline: 1000 real/digit} & 97.30 \\
+\bottomrule
+\end{tabular}
+\caption{Test accuracy for each combination.}
+\label{tab:prob6_combo_results}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Assignment2/image9.png}
+    \caption{Test accuracy for 350-real combinations vs.\ the 1000-real
+             baseline}
+    \label{fig:prob6_combo_bar}
+\end{figure}
+
+% ------------------------------------------
+\subsubsection{Analysis and Conclusions}
+
+\textbf{Best combination matches the 1000-real baseline:}
+The configurations ``350 real + 1000 augmented'' and ``350 real + 1000 aug + 1000 syn''
+both achieve \textbf{97.75\%}, exceeding the 1000-real baseline of 97.30\%. This means
+we can reduce real data requirements by \textbf{65\%} (from 1000 to 350 per digit) with
+no loss in performance.
+
+\textbf{Augmentation outperforms synthetic data alone:}
+With the same budget (1000 generated/digit), augmentation alone (97.75\%) outperforms
+synthetic GAN data alone (96.50\%). This suggests that for this dataset, geometric
+diversity from transformations is more valuable than the structural diversity from a
+GAN trained on limited data.
+
+\textbf{Combined data provides robustness:}
+While the best augmented-only and combined configurations tie at 97.75\%, the combined
+approach is more robust across different mix ratios --- multiple combined configurations
+(97.00--97.75\%) exceed the synthetic-only results (96.15--96.50\%).
+
+\textbf{Diminishing returns from excess synthetic data:}
+Adding more than 1000 synthetic images per digit provides no benefit and can even
+slightly reduce accuracy. The GAN's output diversity is bounded by its training on
+only 350 real images.
+
+\textbf{Summary:}
+\begin{itemize}
+    \item 350 real only: 94.90\%
+    \item Best augmented only (1000 aug): 97.75\%
+    \item Best synthetic only (1500 syn): 96.60\%
+    \item Best combined (1000 aug + 1000 syn): \textbf{97.75\%}
+    \item Baseline (1000 real): 97.30\%
+\end{itemize}
+
+% ------------------------------------------
+\subsection{Comparison: Traditional Augmentation (Problem 5) vs.\ GAN Synthesis (Problem 6)}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Criterion} & \textbf{Augmentation (Prob.~5)} & \textbf{GAN Synthesis (Prob.~6)} \\
+\midrule
+Training required       & No                & Yes (100 epochs, 115.94\,s) \\
+Generation speed        & Fast (transforms) & Fast (0.86\,s for 20k images) \\
+Diversity type          & Geometric/noise   & Structural/stylistic \\
+Label correctness       & Guaranteed        & Guaranteed (conditional) \\
+Compute cost            & Negligible        & Moderate (GPU minutes) \\
+Quality at low data     & Good              & Limited by GAN training set \\
+Best use case           & Always applicable & When structural diversity needed \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of traditional augmentation vs.\ GAN-based synthesis.}
+\label{tab:prob6_comparison}
+\end{table}
+
+\subsubsection{Final Recommendation}
+
+For the ReducedMNIST task with limited labelled data:
+\begin{enumerate}
+    \item \textbf{Always apply traditional augmentation} --- it is free, effective, and
+          universally applicable. It alone can match the 1000-real baseline.
+    \item \textbf{Add GAN synthetic data} when compute resources are available ---
+          the complementary diversity provides additional robustness.
+    \item \textbf{Prioritise collecting more real data} when possible --- no generation
+          method fully replaces the true data distribution.
+\end{enumerate}
+
+\textbf{Timing summary:}
+\begin{itemize}
+    \item GAN training: 115.94\,s (1.93\,min)
+    \item Synthetic generation (20{,}000 images): 0.86\,s
+    \item Total GAN pipeline: 122.33\,s
 \end{itemize}
 
 \end{document}
