@@ -19,6 +19,10 @@ from PIL import Image
 from scipy.fft import dctn
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+from scipy.spatial.distance import cdist
 
 import torch
 import torch.nn as nn
@@ -220,7 +224,54 @@ def extract_autoencoder(ae: Autoencoder, X_train: np.ndarray, X_test: np.ndarray
 
 
 # ===========================================================================
-# 3. MLP MODEL
+# 3. K-MEANS & SVM CLASSIFIERS  (for AutoEncoder features — Assignment 1 table)
+# ===========================================================================
+
+def train_kmeans_classifier(train_features, train_labels, k_per_class):
+    """Train K-Means inside each digit class and return all centroids."""
+    centroids_list, centroid_labels_list = [], []
+    for digit in range(10):
+        class_feats = train_features[train_labels == digit]
+        if k_per_class == 1:
+            class_centroids = class_feats.mean(axis=0, keepdims=True)
+        else:
+            km = KMeans(n_clusters=k_per_class, n_init=10, random_state=42)
+            km.fit(class_feats)
+            class_centroids = km.cluster_centers_
+        centroids_list.append(class_centroids)
+        centroid_labels_list.append(
+            np.full(class_centroids.shape[0], digit, dtype=np.int32)
+        )
+    return np.vstack(centroids_list), np.concatenate(centroid_labels_list)
+
+
+def predict_kmeans(test_features, centroids, centroid_labels):
+    """Predict labels by nearest centroid distance."""
+    distances = cdist(test_features, centroids, metric="euclidean")
+    return centroid_labels[np.argmin(distances, axis=1)]
+
+
+def train_and_test_svm(train_feat, train_labels, test_feat, test_labels,
+                       kernel="rbf"):
+    """Train SVM, predict, and return (accuracy%, elapsed_ms)."""
+    scaler = StandardScaler().fit(train_feat)
+    x_train = scaler.transform(train_feat)
+    x_test = scaler.transform(test_feat)
+    if kernel == "linear":
+        model = SVC(kernel="linear", C=1.0, decision_function_shape="ovo")
+    else:
+        model = SVC(kernel="rbf", C=10.0, gamma="scale",
+                    decision_function_shape="ovo")
+    t0 = time.perf_counter()
+    model.fit(x_train, train_labels)
+    preds = model.predict(x_test)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    acc = accuracy_score(test_labels, preds) * 100.0
+    return acc, elapsed_ms
+
+
+# ===========================================================================
+# 4. MLP MODEL
 # ===========================================================================
 
 def build_mlp(input_dim: int, hidden_layers: list[int], num_classes: int = 10):
@@ -351,7 +402,43 @@ def main():
         ("AutoEncoder", ae_train, ae_test),
     ]
 
-    # ---- Train & evaluate MLPs ----
+    # ==================================================================
+    # K-Means & SVM with AutoEncoder features  (fills Assignment-1 table)
+    # ==================================================================
+    print("\n" + "=" * 70)
+    print("AutoEncoder + K-Means / SVM  (Assignment 1 table — AE column)")
+    print("=" * 70)
+
+    ae_classic_results = {}   # key -> (acc%, time_ms)
+
+    # --- K-Means K=1,4,16,32 ---
+    for k in (1, 4, 16, 32):
+        label = f"KMeans_K{k}"
+        t0 = time.perf_counter()
+        centroids, c_labels = train_kmeans_classifier(ae_train, y_train, k)
+        preds = predict_kmeans(ae_test, centroids, c_labels)
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        acc = accuracy_score(y_test, preds) * 100.0
+        ae_classic_results[label] = (acc, elapsed_ms)
+        print(f"  {label:14s} | Acc={acc:6.2f}%  Time={elapsed_ms:8.1f} ms")
+
+    # --- SVM linear & RBF ---
+    for kernel in ("linear", "rbf"):
+        label = f"SVM_{kernel}"
+        acc, elapsed_ms = train_and_test_svm(
+            ae_train, y_train, ae_test, y_test, kernel=kernel
+        )
+        ae_classic_results[label] = (acc, elapsed_ms)
+        print(f"  {label:14s} | Acc={acc:6.2f}%  Time={elapsed_ms:8.1f} ms")
+
+    # Quick summary
+    print("\n  --- AutoEncoder column summary (for Assignment 1 table) ---")
+    print(f"  {'Classifier':14s} | {'Acc (%)':>8s} | {'Time (ms)':>10s}")
+    print("  " + "-" * 40)
+    for lbl, (a, t) in ae_classic_results.items():
+        print(f"  {lbl:14s} | {a:8.2f} | {t:10.1f}")
+
+    # ---- Train & evaluate MLPs (Assignment 2) ----
     # Results table:  results[feat_name][config_name] = (accuracy, time_ms)
     results = {}
 
@@ -371,7 +458,7 @@ def main():
 
     # ---- Print summary table ----
     print("\n" + "=" * 70)
-    print("RESULTS SUMMARY")
+    print("MLP RESULTS SUMMARY")
     print("=" * 70)
 
     header = f"{'Configuration':<16}"
