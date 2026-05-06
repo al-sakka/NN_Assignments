@@ -1,0 +1,6 @@
+Training Data,Accuracy
+350 real (baseline),95.90
+1000 real (baseline),97.25
+350 real + GAN A (all),97.45
+350 real + GAN B (conf≥0.9),97.45
+350 real + GAN C (0.6≤conf<0.9),97.55
