@@ -1,0 +1,6 @@
+Training Data,Accuracy
+350 real (baseline),95.90
+1000 real (baseline),97.60
+350 real + VAE A (all),97.30
+350 real + VAE B (conf>=0.9),96.85
+350 real + VAE C (0.6<=conf<0.9),98.45

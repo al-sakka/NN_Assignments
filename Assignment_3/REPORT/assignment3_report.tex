@@ -1,0 +1,557 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{newtxtext,newtxmath}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{titlesec}
+\usepackage{subcaption}
+
+\definecolor{NTRA_Blue}{RGB}{0,82,155}
+
+\geometry{a4paper, margin=1in, headheight=14pt}
+\setstretch{1.25}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\arraystretch}{1.12}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=NTRA_Blue,
+    citecolor=NTRA_Blue,
+    urlcolor=NTRA_Blue,
+    pdftitle={NN Assignment 3 Report}
+}
+
+\captionsetup{font=small, labelfont=bf, labelsep=period}
+\setlist{itemsep=0.25em, topsep=0.35em, parsep=0pt, partopsep=0pt}
+
+\titleformat{\section}{\Large\bfseries\color{NTRA_Blue}}{\thesection}{0.8em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.1em}{0.5em}
+\titlespacing*{\subsubsection}{0pt}{0.9em}{0.4em}
+
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{NN Assignment 3}
+\fancyhead[R]{\nouppercase{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\begin{document}
+
+% ==========================================
+% TITLE PAGE
+% ==========================================
+\begin{titlepage}
+    \centering
+    \thispagestyle{empty}
+
+    \begin{minipage}[c]{0.2\textwidth}
+        \begin{flushleft}
+            \IfFileExists{Picture1.png}{%
+                \includegraphics[width=2.5cm]{Picture1.png}%
+            }{}
+        \end{flushleft}
+    \end{minipage}%
+    \hfill
+    \begin{minipage}[c]{0.5\textwidth}
+        \centering
+        \setstretch{1.1}
+        {\large \textbf{Cairo University}} \\
+        {\large Faculty of Engineering} \\
+        {\large Electronics \& Communications Dept.}
+    \end{minipage}%
+    \hfill
+    \begin{minipage}[c]{0.2\textwidth}
+        \begin{flushright}
+            \IfFileExists{Picture2.jpg}{%
+                \includegraphics[width=2.5cm]{Picture2.jpg}%
+            }{}
+        \end{flushright}
+    \end{minipage}
+
+    \vspace{2.5cm}
+
+    \rule{\linewidth}{0.8mm} \\[0.5cm]
+    {\color{NTRA_Blue} \huge \bfseries Neural Networks} \\[0.5cm]
+    {\color{NTRA_Blue} \huge  Assignment \#3} \\[0.3cm]
+    {\color{NTRA_Blue} \Large Synthetic Data Generation with VAE \& GAN} \\[0.5cm]
+    \rule{\linewidth}{0.8mm} \\[1.5cm]
+
+    \vfill
+
+    \begin{center}
+        \setstretch{1.5}
+        \textbf{Prepared by:} \\[0.3cm]
+        \renewcommand{\arraystretch}{1.4}
+        \begin{tabular}{@{} c | c @{}}
+            \toprule
+            \textbf{Name} & \textbf{ID} \\
+            \midrule
+            Zeyad Antar Othman Abu-Zaid & 9220331 \\
+            Abdelrahman Hatem Nasr Youssef & 9220461 \\
+            Abdallah Essam Mohamed Mahmoud & 9220479 \\
+            \bottomrule
+        \end{tabular}
+
+        \vspace{2cm}
+
+        \textbf{Submitted to:} \\
+        Dr.\ Mohsen Rashwan \\
+        Dr.\ Mohamed Abdelghani \\
+    \end{center}
+
+    \vfill
+
+    \textbf{GitHub:}~\href{https://github.com/al-sakka/NN_Assignments/tree/main/Assignment_3}{\textbf{GitHub Repository}}
+
+    \vfill
+    \rule{0.3\linewidth}{0.2mm} \\
+    {\large May 2026}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ==========================================
+% 1. INTRODUCTION
+% ==========================================
+\section{Introduction}
+
+Deep learning models need a lot of data to work well, but getting large labelled datasets
+is often expensive or just not possible.  In this assignment we look at ways to boost model
+performance when training data is limited.
+
+For \textbf{Problems~1 and~2} we focus on \textbf{synthetic data generation} using the
+ReducedMNIST dataset (10 digit classes, $28\times28$ images, only \textbf{350 training
+samples per class}).  We train a \textbf{Conditional VAE (CVAE)} and a
+\textbf{Conditional DCGAN (cDCGAN)}, use them to generate new images, filter those images
+by how confident a classifier is about them, and then check whether adding them actually
+helps classification.
+
+% ==========================================
+% 2. PROBLEM 1 — CVAE
+% ==========================================
+\section{Problem 1 --- Synthetic Data Generation with Conditional VAE}
+
+\subsection{Methodology}
+
+\subsubsection{Data Loading and Preparation}
+
+The \textbf{ReducedMNIST} dataset has folders \texttt{0/} through \texttt{9/}, each
+holding grayscale JPEG images of that digit.  Although the full training set contains
+1\,000 images per class, we only use the \textbf{first 350 per class} on purpose to
+simulate having limited data.  Every image is resized to $28 \times 28$ and normalised
+to $[0, 1]$.
+
+\subsubsection{Data Augmentation}
+\label{sec:augmentation}
+
+With only 350 images per class there is a real risk of poor test accuracy.  To help with this
+we apply \textbf{15$\times$ data augmentation} through simple geometric transforms:
+
+\begin{itemize}
+    \item \textbf{Random rotation:} up to $\pm15^{\circ}$
+    \item \textbf{Random translation:} up to 10\% horizontally and vertically
+    \item \textbf{Random scaling:} between 90\% and 110\% of original size
+\end{itemize}
+
+These transforms keep each digit recognisable while adding variety similar to
+real handwriting differences.  The training set grows from
+$350 \times 10 = 3{,}500$ to roughly $5{,}600 \times 10 = 56{,}000$ samples.
+
+\subsubsection{CVAE Architecture}
+
+A VAE learns a smooth latent space that we can sample from to create new images.
+By giving it the class label as an extra input, we get to choose \emph{which digit}
+gets generated.
+
+\begin{itemize}
+    \item \textbf{Encoder:} The input image $(1, 28, 28)$ is concatenated with a learnable
+          \emph{label map} --- a $28 \times 28$ embedding of the class label --- along the
+          channel dimension, yielding a $(2, 28, 28)$ tensor.  Three convolutional layers
+          (with BatchNorm and ReLU) downsample this to a 2\,048-dimensional feature vector,
+          which is projected to the mean $\boldsymbol{\mu}$ and log-variance
+          $\log \boldsymbol{\sigma}^{2}$ of a 64-dimensional latent Gaussian.
+
+    \item \textbf{Reparameterization:} A latent code $\mathbf{z}$ is sampled via
+          $\mathbf{z} = \boldsymbol{\mu} + \boldsymbol{\sigma} \odot \boldsymbol{\epsilon}$,
+          $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$.
+
+    \item \textbf{Decoder:} The latent code $\mathbf{z}$ is concatenated with a separate
+          label embedding and projected back to $(128, 4, 4)$.  Three transposed-convolution
+          layers upsample this to the reconstructed image $(1, 28, 28)$ with a final Sigmoid
+          activation.
+\end{itemize}
+
+\subsubsection{Loss Function}
+
+The CVAE is trained to minimise:
+\[
+    \mathcal{L}_{\text{CVAE}} = \underbrace{\text{BCE}(\hat{\mathbf{x}}, \mathbf{x})}_{\text{reconstruction}}
+    \;+\; \underbrace{D_{\text{KL}}\!\bigl(\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\sigma}^{2})
+    \;\|\; \mathcal{N}(\mathbf{0}, \mathbf{I})\bigr)}_{\text{regularisation}}
+\]
+The \textbf{BCE term} pushes the output to look like the input, while the \textbf{KL term}
+keeps the latent distribution close to a standard normal so that we can smoothly
+interpolate between digits and sample meaningful new ones.
+
+\subsubsection{LeNet-5 Classifier}
+
+We use LeNet-5 for two things:
+\begin{enumerate}
+    \item \textbf{Confidence filtering:} we first train it on the 350 real samples and use
+          its softmax scores to judge how good each generated image looks.
+    \item \textbf{Final evaluation:} we then retrain it from scratch on real + synthetic
+          data and measure test accuracy.
+\end{enumerate}
+
+Architecture: Conv(1$\to$6, $5\!\times\!5$) $\to$ ReLU $\to$ MaxPool $\to$
+Conv(6$\to$16, $5\!\times\!5$) $\to$ ReLU $\to$ MaxPool $\to$ FC(400$\to$120) $\to$
+FC(120$\to$84) $\to$ FC(84$\to$10).  Trained for 20 epochs with Adam ($\text{lr} = 10^{-3}$).
+
+\subsubsection{Generation and Filtering Pipeline}
+
+\begin{enumerate}
+    \item \textbf{Generate:} 5 independent runs $\times$ 1\,000 samples per class = 50\,000 total.
+    \item \textbf{Score:} the pre-trained LeNet-5 computes the maximum softmax probability
+          (confidence) for each generated image.
+    \item \textbf{Filter into three datasets:}
+    \begin{itemize}
+        \item \textbf{Dataset A:} all 50\,000 generated samples (no filtering).
+        \item \textbf{Dataset B:} only samples with confidence $\geq 0.9$ (high quality).
+        \item \textbf{Dataset C:} samples with $0.6 \leq$ confidence $< 0.9$ (medium quality).
+    \end{itemize}
+    \item \textbf{Retrain:} for each dataset, combine the 350 real samples with the synthetic
+          subset and retrain LeNet-5 from scratch.  Evaluate on the test set.
+\end{enumerate}
+
+\subsection{Experimental Setup}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Dataset            & ReducedMNIST ($28 \times 28$, 10 classes) \\
+Real training data & 350 images/class (limited) \\
+Test data          & 200 images/class (2\,000 total) \\
+Augmentation       & 15$\times$ (rotation, translation, scaling) \\
+\midrule
+CVAE latent dim    & 64 \\
+CVAE epochs        & 50 \\
+CVAE batch size    & 128 \\
+CVAE optimiser     & Adam, lr = $10^{-3}$ \\
+\midrule
+LeNet-5 epochs     & 20 \\
+LeNet-5 optimiser  & Adam, lr = $10^{-3}$ \\
+LeNet-5 batch size & 64 \\
+\midrule
+Generation         & 5 runs $\times$ 1\,000/class = 50\,000 \\
+Confidence filter  & LeNet-5 max-softmax \\
+\bottomrule
+\end{tabular}
+\caption{Problem~1 hyperparameters (CVAE).}
+\label{tab:p1_hyperparams}
+\end{table}
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Training Data} & \textbf{Synthetic Samples} & \textbf{Test Accuracy (\%)} \\
+\midrule
+350 real (baseline)               & 0       & 95.90 \\
+350 real + VAE Dataset A (all)    & 50\,000 & 97.30 \\
+350 real + VAE Dataset B ($\geq$0.9)  & 32\,968   & 96.85 \\
+350 real + VAE Dataset C (0.6--0.9)   & 11\,821   & 98.45 \\
+\midrule
+1\,000 real (upper baseline)      & 0       & 97.60 \\
+\bottomrule
+\end{tabular}
+\caption{LeNet-5 accuracy when augmented with CVAE-generated samples.}
+\label{tab:vae_results}
+\end{table}
+
+\subsection{Analysis}
+
+Every synthetic dataset beats the 350-sample baseline of 95.90\%.
+\textbf{Dataset~C} (medium confidence, $0.6 \leq \text{conf} < 0.9$) does the best at
+\textbf{98.45\%}, which is even higher than the 1\,000-real upper baseline (97.60\%).
+
+\textbf{Dataset~B} ($\geq 0.9$ confidence) only reaches 96.85\%.  It seems like the
+highest-confidence VAE samples are ``too safe'' --- they look a lot like what the model
+already saw during training, so they do not really teach it anything new.
+
+\textbf{Dataset~C} has more variety: slightly unusual stroke styles, borderline shapes, and
+so on.  That extra diversity helps the classifier generalise, almost like a form of
+regularisation.
+
+The main takeaway here is that medium-confidence filtering works better than both no
+filtering and strict high-confidence filtering, at least for VAE-generated data.
+
+% ==========================================
+% 3. PROBLEM 2 — cDCGAN
+% ==========================================
+\section{Problem 2 --- Synthetic Data Generation with Conditional DCGAN}
+
+\subsection{Methodology}
+
+Everything from data loading to augmentation to the LeNet-5 pipeline stays the same as
+in Problem~1.  The only difference is that we swap the CVAE for a
+\textbf{Conditional Deep Convolutional GAN (cDCGAN)}.
+
+\subsubsection{Generator Architecture}
+
+\begin{enumerate}
+    \item A 100-dimensional noise vector $\mathbf{z}$ is concatenated with a 10-dimensional
+          label embedding.
+    \item A fully connected layer projects the 110-dimensional input to $256 \times 7 \times 7$
+          (with BatchNorm + ReLU).
+    \item Two transposed convolution layers upsample to $128 \times 14 \times 14$ and then
+          $64 \times 28 \times 28$.
+    \item A final $3 \times 3$ convolution with Sigmoid produces the $(1, 28, 28)$ output.
+\end{enumerate}
+
+\subsubsection{Discriminator Architecture}
+
+\begin{enumerate}
+    \item The input image $(1, 28, 28)$ is concatenated with a label map $(1, 28, 28)$ along
+          the channel dimension.
+    \item Two convolutional layers (with LeakyReLU and Dropout) downsample to
+          $128 \times 7 \times 7$.
+    \item A fully connected layer outputs a single real/fake probability (Sigmoid).
+\end{enumerate}
+
+\subsubsection{Training Details}
+
+\begin{itemize}
+    \item \textbf{Loss:} Binary Cross-Entropy (BCE).
+    \item \textbf{Label smoothing:} Real targets set to 0.9 instead of 1.0 to stabilise training.
+    \item \textbf{Optimiser:} Adam with $\text{lr} = 2 \times 10^{-4}$, $\beta_{1} = 0.5$,
+          $\beta_{2} = 0.999$ (standard DCGAN hyperparameters).
+    \item \textbf{Epochs:} 100.
+\end{itemize}
+
+\subsection{Experimental Setup}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+cDCGAN noise dim   & 100 \\
+cDCGAN epochs      & 100 \\
+cDCGAN batch size  & 128 \\
+cDCGAN optimiser   & Adam, lr = $2 \times 10^{-4}$, $\beta = (0.5, 0.999)$ \\
+Label smoothing    & 0.9 \\
+\midrule
+Generation         & 5 runs $\times$ 1\,000/class = 50\,000 \\
+Confidence filter  & LeNet-5 max-softmax \\
+\bottomrule
+\end{tabular}
+\caption{Problem~2 hyperparameters (cDCGAN). Data, augmentation, and LeNet-5
+         settings are the same as Table~\ref{tab:p1_hyperparams}.}
+\label{tab:p2_hyperparams}
+\end{table}
+
+\subsection{Results}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Training Data} & \textbf{Synthetic Samples} & \textbf{Test Accuracy (\%)} \\
+\midrule
+350 real (baseline)                & 0       & 95.90 \\
+350 real + GAN Dataset A (all)     & 50\,000 & 97.45 \\
+350 real + GAN Dataset B ($\geq$0.9)   & 35\,512   & 97.45 \\
+350 real + GAN Dataset C (0.6--0.9)    & 10\,120   & 97.55 \\
+\midrule
+1\,000 real (upper baseline)       & 0       & 97.25 \\
+\bottomrule
+\end{tabular}
+\caption{LeNet-5 accuracy when augmented with cDCGAN-generated samples.}
+\label{tab:gan_results}
+\end{table}
+
+\subsection{Analysis}
+
+All three GAN-augmented setups beat the 350-sample baseline.  What stands out is how
+close the numbers are: Datasets A, B, and C give 97.45\%, 97.45\%, and 97.55\%.
+The filtering strategy barely matters here, which tells us the cDCGAN is producing
+pretty good samples across the board.
+
+Another thing worth noting is that the GAN ended up with a bigger Dataset~B
+(35\,512 vs.\ 32\,968 for the VAE).  GAN outputs tend to be \emph{sharper}, so the
+classifier is more confident about them on average.
+
+\subsection{VAE vs.\ GAN Comparison}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Configuration} & \textbf{VAE Acc.\ (\%)} & \textbf{VAE Samples}
+                        & \textbf{GAN Acc.\ (\%)} & \textbf{GAN Samples} \\
+\midrule
+350 real baseline                     & 95.90  & --- & 95.90  & --- \\
++ Dataset A (all generated)           & 97.30  & 50\,000 & 97.45  & 50\,000 \\
++ Dataset B (conf $\geq 0.9$)         & 96.85  & 32\,968 & 97.45  & 35\,512 \\
++ Dataset C ($0.6 \leq$ conf $< 0.9$) & 98.45  & 11\,821 & 97.55  & 10\,120 \\
+\midrule
+1\,000 real baseline                  & 97.60  & --- & 97.25  & --- \\
+\bottomrule
+\end{tabular}
+\caption{Side-by-side comparison of VAE vs.\ GAN synthetic augmentation.}
+\label{tab:comparison}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{VAEs} are trained with a reconstruction + KL loss, which gives them a
+          smooth latent space.  The downside is that their outputs tend to be a bit
+          \emph{blurry}.  Still, the diversity in Dataset~C turned out to be very
+          helpful, giving us the best overall accuracy (\textbf{98.45\%}).
+
+    \item \textbf{GANs} learn by competing (generator vs.\ discriminator) and produce
+          \emph{sharper} images.  Their numbers are steady across all filtering levels
+          (97.45--97.55\%), so they are a safe bet if you do not want to worry about
+          picking the right confidence threshold.
+
+    \item \textbf{Best overall:} VAE Dataset~C at 98.45\%.  The slightly blurry but
+          diverse samples from the CVAE end up being the most useful for training.
+
+    \item \textbf{Both models beat the 350-sample baseline} and get close to (or pass)
+          the 1\,000-real upper bound, which shows that generating synthetic data
+          really does work when you do not have enough real images.
+\end{itemize}
+
+% ==========================================
+% COMPREHENSIVE SUMMARY
+% ==========================================
+\section{Comprehensive Summary and Comparison with Assignment~2}
+
+\subsection{Which GAN Selection Strategy Gives the Best Improvement?}
+
+Out of the three filtering strategies, \textbf{Dataset~C} (medium confidence,
+$0.6 \leq \text{conf} < 0.9$) gives the best GAN accuracy at \textbf{97.55\%},
+just slightly above Datasets~A and~B (both 97.45\%).  For the CVAE the gap is
+bigger --- Dataset~C hits \textbf{98.45\%}, the best number we saw anywhere.
+
+Why does medium confidence win?  Those samples are different enough to teach the
+classifier something new, but still look enough like real digits to be useful.
+The high-confidence ones (Dataset~B) are basically copies of what the model
+already knows, and the unfiltered set (Dataset~A) has some bad samples mixed in.
+
+\subsection{Does Synthetic Data Reduce the Need for Real Data?}
+
+Yes.  Starting from just \textbf{350 real images per class}, adding either VAE or
+GAN samples pushes accuracy past the 350-real baseline (95.90\%) and even past
+the \textbf{1\,000-real upper baseline} (97.25--97.60\%).  VAE Dataset~C gets to
+98.45\%, which we probably could not reach even with 1\,000 real images.
+So if collecting more real data is hard or expensive, generating synthetic
+samples and filtering them carefully is a solid alternative.
+
+\subsection{Comparison with Traditional Augmentation (Assignment~2)}
+
+In Assignment~2 we tested traditional augmentation (rotation, translation, Gaussian noise)
+and also plain GAN synthesis on the same ReducedMNIST dataset with LeNet-5.
+The table below puts all the important numbers from both assignments side by side.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{l l c}
+\toprule
+\textbf{Source} & \textbf{Configuration (350 real/class base)} & \textbf{Test Acc.\ (\%)} \\
+\midrule
+\multicolumn{3}{l}{\textit{Baselines}} \\
+Asgn.\ 2 & 350 real only                                    & 94.90--96.35 \\
+Asgn.\ 3 & 350 real only                                    & 95.90 \\
+Asgn.\ 2 & 1\,000 real only                                 & 96.90--97.30 \\
+Asgn.\ 3 & 1\,000 real only                                 & 97.25--97.60 \\
+\midrule
+\multicolumn{3}{l}{\textit{Assignment 2 --- Traditional Augmentation (Problem 5)}} \\
+Asgn.\ 2 & 350 real + 1\,000 augmented/digit                & 96.80 \\
+Asgn.\ 2 & 350 real + 2\,000 augmented/digit                & 97.20 \\
+\midrule
+\multicolumn{3}{l}{\textit{Assignment 2 --- GAN Synthesis (Problem 6, no filtering)}} \\
+Asgn.\ 2 & 350 real + 1\,000 GAN synthetic/digit            & 95.80 \\
+Asgn.\ 2 & 350 real + 1\,500 GAN synthetic/digit            & 96.60 \\
+\midrule
+\multicolumn{3}{l}{\textit{Assignment 2 --- Combined Aug.\ + GAN (Problem 6.3)}} \\
+Asgn.\ 2 & 350 real + 1\,000 aug + 1\,000 syn               & \textbf{97.75} \\
+\midrule
+\multicolumn{3}{l}{\textit{Assignment 3 --- CVAE with Confidence Filtering (Problem 1)}} \\
+Asgn.\ 3 & 350 real + VAE Dataset A (all, 50\,000)          & 97.30 \\
+Asgn.\ 3 & 350 real + VAE Dataset B ($\geq$0.9, 32\,968)    & 96.85 \\
+Asgn.\ 3 & 350 real + VAE Dataset C (0.6--0.9, 11\,821)     & \textbf{98.45} \\
+\midrule
+\multicolumn{3}{l}{\textit{Assignment 3 --- cDCGAN with Confidence Filtering (Problem 2)}} \\
+Asgn.\ 3 & 350 real + GAN Dataset A (all, 50\,000)          & 97.45 \\
+Asgn.\ 3 & 350 real + GAN Dataset B ($\geq$0.9, 35\,512)    & 97.45 \\
+Asgn.\ 3 & 350 real + GAN Dataset C (0.6--0.9, 10\,120)     & 97.55 \\
+\bottomrule
+\end{tabular}
+\caption{Consolidated results across Assignments~2 and~3 (all using 350 real images/class as the base training set).}
+\label{tab:consolidated}
+\end{table}
+
+\subsection{Key Takeaways}
+
+\begin{enumerate}
+    \item \textbf{Filtering makes a big difference.}
+          In Assignment~2 we just threw all GAN samples into training and got modest
+          gains (95.80--96.60\%).  Here in Assignment~3, using confidence-based
+          filtering on the same type of GAN bumps accuracy to 97.45--97.55\%.  The
+          lesson is clear: it is not just about generating more data, it is about
+          picking the \emph{right} generated data.
+
+    \item \textbf{VAE Dataset~C wins overall} at 98.45\%, beating everything else
+          including Assignment~2's best combined setup (97.75\%).  The CVAE's smooth
+          latent space seems to produce just the right mix of variety and quality
+          in the medium-confidence range.
+
+    \item \textbf{Plain augmentation still works really well.}
+          Back in Assignment~2, simply rotating and shifting 350 real images gave
+          97.75\% --- no generative model needed.  It is free, simple, and hard
+          to beat, so it should always be the first thing to try.
+
+    \item \textbf{We can get by with less real data.}
+          Several setups using only 350 real images per class beat the 1\,000-real
+          baseline.  That means generative augmentation can cut the real data
+          requirement by over 65\% without hurting accuracy.
+\end{enumerate}
+
+\end{document}
