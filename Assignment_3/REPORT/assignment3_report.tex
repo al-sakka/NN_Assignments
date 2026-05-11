@@ -1,7 +1,6 @@
 \documentclass[12pt, a4paper]{article}
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage{fontspec}
 \usepackage{geometry}
 \usepackage{setspace}
 \usepackage{graphicx}
@@ -12,7 +11,14 @@
 \usepackage{multirow}
 \usepackage{xcolor}
 \usepackage{textcomp}
-\usepackage{newtxtext,newtxmath}
+\usepackage{newtxmath}
+
+% Main Latin font (matches newtxtext appearance)
+\setmainfont{Times New Roman}
+
+% Arabic text support
+\newfontfamily\arabicfont[Script=Arabic, Scale=1.1]{Simplified Arabic}
+\newcommand{\arb}[1]{{\arabicfont #1}}
 \usepackage{caption}
 \usepackage{enumitem}
 \usepackage{fancyhdr}
@@ -552,6 +558,458 @@ Asgn.\ 3 & 350 real + GAN Dataset C (0.6--0.9, 10\,120)     & 97.55 \\
           Several setups using only 350 real images per class beat the 1\,000-real
           baseline.  That means generative augmentation can cut the real data
           requirement by over 65\% without hurting accuracy.
+\end{enumerate}
+
+% ==========================================
+% 4. PROBLEM 3 — ATTENTION MECHANISMS
+% ==========================================
+\newpage
+\section{Problem 3 --- Understanding the Impact of Attention Mechanisms}
+
+\subsection{Objective}
+
+The goal is to compare a \textbf{baseline CNN} (LeNet-5) against the same network
+augmented with a \textbf{spatial attention module} on two tasks:
+\begin{enumerate}
+    \item \textbf{ReducedMNIST} --- the same digit-image dataset from Problems~1 and~2.
+    \item \textbf{Spoken Digits} --- classifying Mel-spectrogram images of spoken digits
+          (the audio dataset from Assignment~2).
+\end{enumerate}
+We measure \emph{accuracy} and \emph{training time} for each configuration.
+
+\subsection{Methodology}
+
+\subsubsection{What Is Spatial Attention?}
+
+A plain CNN applies the same convolution everywhere equally.
+\textbf{Spatial attention} learns a 2-D mask (one value per spatial location) that
+highlights the most informative regions --- for example, the stroke of a digit or
+a strong harmonic in a spectrogram --- while fading out background clutter.
+
+\begin{enumerate}
+    \item \textbf{Channel pooling:} compute the average and max across the channel
+          dimension, producing two single-channel maps.
+    \item \textbf{Concatenation:} stack the two maps into a 2-channel tensor.
+    \item \textbf{$3\times3$ convolution $\to$ 1-channel mask.}
+    \item \textbf{Sigmoid:} normalise the mask to $[0, 1]$.
+    \item \textbf{Element-wise multiply:} apply the mask to the original feature maps.
+\end{enumerate}
+
+The attention block is inserted \textbf{after the first pooling layer}, where the
+spatial resolution is still large enough for the $3\times3$ kernel to capture local
+saliency without blurring the whole map.
+
+\subsubsection{Network Architectures}
+
+\paragraph{ReducedMNIST --- LeNet-5.}
+Conv($1 \to 6$, $5\!\times\!5$) $\to$ ReLU $\to$ MaxPool $\to$
+\emph{[Spatial Attention]} $\to$
+Conv($6 \to 16$, $5\!\times\!5$) $\to$ ReLU $\to$ MaxPool $\to$
+FC(400$\to$120) $\to$ FC(120$\to$84) $\to$ FC(84$\to$10).
+
+\paragraph{Spoken Digits --- SpectrogramCNN (from Assignment~2 Q3).}
+For the spectrogram task we reuse the \textbf{exact 3-layer CNN from Assignment~2 Q3}
+(Conv--BN--ReLU--Pool $\times 3$, with Dropout in the FC layers).
+This is important because the assignment explicitly asks to \emph{revisit the spoken
+digits task from Assignment~2}, so LeNet-5 would not be the right baseline.
+Spatial attention is inserted after the first pool layer ($16 \times 16$ maps).
+
+\subsection{Experimental Setup}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Image size         & $32 \times 32$ \\
+Batch size         & 64 \\
+Epochs             & 15 \\
+Learning rate      & $10^{-3}$ (Adam) \\
+Loss function      & CrossEntropyLoss \\
+Random seed        & 42 \\
+\midrule
+MNIST data         & 10\,000 train / 2\,000 test \\
+Audio data         & 1\,200 train / 300 test \\
+Spectrogram        & 64-bin Mel, resized to $32 \times 32$ \\
+\bottomrule
+\end{tabular}
+\caption{Problem~3 hyperparameters.}
+\label{tab:p3_hyperparams}
+\end{table}
+
+\subsection{Results}
+
+\subsubsection{Core Comparison: Baseline vs.\ Spatial Attention}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l c c}
+\toprule
+\textbf{Task} & \textbf{Model} & \textbf{Accuracy (\%)} & \textbf{Time (s)} \\
+\midrule
+ReducedMNIST       & LeNet-5 (Baseline)            & 97.75 & 105.8 \\
+ReducedMNIST       & LeNet-5 + Spatial Attention    & \textbf{98.20} & 113.8 \\
+\midrule
+Spoken Digits      & SpectrogramCNN (A2 Baseline)   & \textbf{97.67} & 94.1 \\
+Spoken Digits      & SpectrogramCNN + Spatial Attn  & 95.00 & 75.8 \\
+\bottomrule
+\end{tabular}
+\caption{Baseline vs.\ spatial attention on both tasks.}
+\label{tab:p3_core}
+\end{table}
+
+On ReducedMNIST, spatial attention gives a modest boost ($+0.45$~pp) with an
+8\% increase in training time.  On spoken digits, however, the attention model
+\emph{drops} by 2.67~pp compared to the strong SpectrogramCNN baseline.
+The extra parameters are not helping when the baseline is already very strong
+at~97.67\%.
+
+\subsubsection{Bonus Experiments: Alternative Attention Mechanisms}
+
+We also implemented and tested four additional architectures to go beyond the
+required spatial attention comparison.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l l c c}
+\toprule
+\textbf{Task} & \textbf{Model} & \textbf{Attention} & \textbf{Acc.\ (\%)} & \textbf{Time (s)} \\
+\midrule
+\multicolumn{5}{l}{\textit{ReducedMNIST}} \\
+ & CNN (Baseline)       & None    & 97.75 & 105.8 \\
+ & CNN + Spatial Attn   & Spatial & 98.20 & 113.8 \\
+ & CNN + SE Block       & Channel & 97.85 & 112.5 \\
+ & CNN + Self-Attention & Self    & 95.90 & 141.8 \\
+ & ResNet-18 + SE       & Channel & \textbf{98.40} & 204.7 \\
+\midrule
+\multicolumn{5}{l}{\textit{Spoken Digits (Spectrogram)}} \\
+ & CNN (Baseline)       & None    & \textbf{97.67} & 94.1 \\
+ & CNN + Spatial Attn   & Spatial & 95.00 & 75.8 \\
+ & CNN + SE Block       & Channel & 85.00 & 65.8 \\
+ & CNN + Self-Attention & Self    & 64.00 & 70.4 \\
+ & CNN + SpecAugment    & None    & 72.33 & 67.3 \\
+ & CNN + SE + SpecAug   & Channel & 61.67 & 82.7 \\
+ & ResNet-18 + SE       & Channel & \textbf{97.67} & 65.8 \\
+\bottomrule
+\end{tabular}
+\caption{Master results table --- all attention variants compared.}
+\label{tab:p3_master}
+\end{table}
+
+\subsection{Analysis}
+
+\begin{enumerate}
+    \item \textbf{Model architecture matters more than attention.}
+          Switching from LeNet-5 to SpectrogramCNN or ResNet-18 has a far bigger
+          impact than adding any attention module.  ResNet-18 + SE matches the
+          SpectrogramCNN baseline at 97.67\% on spoken digits while also topping
+          the MNIST leaderboard at 98.40\%.
+
+    \item \textbf{Spatial attention helps on MNIST but hurts on spectrograms.}
+          On clean, centred digit images the attention mask learns to focus on
+          the stroke.  On spectrograms, the discriminative information is spread
+          across \emph{frequency bands} (channels), not spatial locations ---
+          so spatial attention is the wrong inductive bias.
+
+    \item \textbf{Self-attention is data-hungry.}
+          The Transformer-style head (95.90\% on MNIST, 64.00\% on audio)
+          underfits on these small datasets.  It needs more data or aggressive
+          augmentation to shine.
+
+    \item \textbf{SE (channel) attention on a shallow backbone underperforms.}
+          LeNet-5 only has 6 and 16 channels, so there is not much for the
+          SE block to re-weight.  On ResNet-18 (64--512 channels), channel
+          attention becomes effective again.
+
+    \item \textbf{Training-time overhead is small.}
+          Spatial attention adds about 7\% wall-clock time on LeNet-5.
+          The self-attention head is the most expensive at $+34\%$ due to the
+          matrix multiplications in the Transformer layer.
+\end{enumerate}
+
+\subsection{Comparison with Assignment~2}
+
+In Assignment~2, the SpectrogramCNN baseline for spoken digits achieved
+$\sim$99\% accuracy on a clean train/test split.  Here we see 97.67\% instead,
+which is slightly lower because we use a smaller data subset and a fixed seed.
+The key takeaway remains the same: \textbf{model architecture} (deeper CNNs with
+BatchNorm and Dropout) matters far more than bolting on attention when the task
+is already well-suited to convolutions.
+
+% ==========================================
+% 5. PROBLEM 4 — ARABIC RAG
+% ==========================================
+\newpage
+\section{Problem 4 --- General Information Retrieval (Arabic Q/A)}
+
+\subsection{Objective}
+
+Build a complete \textbf{Arabic question-answering pipeline} that demonstrates
+three levels of retrieval:
+\begin{enumerate}
+    \item \textbf{Classical search} (TF-IDF).
+    \item \textbf{Semantic search} (dense embeddings + FAISS).
+    \item \textbf{Retrieval-Augmented Generation (RAG)} --- a small LLM answers
+          using retrieved context.
+\end{enumerate}
+We compare all three against a baseline of \textbf{LLM-only generation}
+(no retrieval) over 10 Arabic questions about a selected book.
+
+\subsection{Methodology}
+
+\subsubsection{Selected Book}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Attribute} & \textbf{Details} \\
+\midrule
+Title      & Muqaddimah (\arb{مقدمة ابن خلدون}) \\
+Author     & Abd al-Rahman ibn Khaldun \\
+Source     & Internet Archive (public domain) \\
+Raw size   & 2\,037\,175 characters (two volumes combined) \\
+Clean size & 1\,717\,070 Arabic characters \\
+\bottomrule
+\end{tabular}
+\caption{Source text details.}
+\label{tab:p4_book}
+\end{table}
+
+We chose the Muqaddimah because it is less commonly used in NLP benchmarks
+than the Quran, and its rich vocabulary in sociology, history, and philosophy
+makes retrieval genuinely useful --- the LLM is less likely to have memorised
+every paragraph.
+
+\subsubsection{Text Preprocessing and Chunking}
+
+\begin{enumerate}
+    \item \textbf{Sentence splitting} --- split on Arabic sentence terminators
+          (\texttt{.} \texttt{!} \texttt{?} and newlines).
+    \item \textbf{Filtering} --- discard fragments shorter than 10 characters
+          (page numbers, headers).
+    \item \textbf{Chunking} --- group 2--4 consecutive sentences into one passage,
+          yielding \textbf{10\,946 chunks} from \textbf{32\,680 sentences}.
+    \item \textbf{Embedding prefix} --- each chunk is prefixed with
+          \texttt{passage:}\ as required by the E5 model family.
+\end{enumerate}
+
+\subsubsection{Embedding and Indexing}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Component} & \textbf{Details} \\
+\midrule
+Embedding model    & \texttt{intfloat/multilingual-e5-small} (384-dim) \\
+Encoding time      & $\sim$23\,s on CUDA (RTX 2050) \\
+Vector DB          & FAISS \texttt{IndexFlatIP} (exact cosine search) \\
+Classical index    & \texttt{TfidfVectorizer}, 50\,000-feature sparse matrix \\
+Passage count      & 10\,946 chunks \\
+\bottomrule
+\end{tabular}
+\caption{Retrieval infrastructure.}
+\label{tab:p4_index}
+\end{table}
+
+\subsubsection{LLM for Generation}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l}
+\toprule
+\textbf{Attribute} & \textbf{Details} \\
+\midrule
+Model              & \texttt{Qwen/Qwen2.5-1.5B-Instruct} \\
+Size               & $\sim$1.5\,B parameters \\
+Precision          & float16 (offloaded to CPU due to VRAM constraints) \\
+Generation         & \texttt{max\_new\_tokens}~=~512, temp~=~0.7, top-$p$~=~0.91 \\
+Avg.\ time/query   & $\sim$177\,s (RAG + LLM-only combined) \\
+\bottomrule
+\end{tabular}
+\caption{LLM configuration.}
+\label{tab:p4_llm}
+\end{table}
+
+\subsubsection{Generation Modes}
+
+\begin{itemize}
+    \item \textbf{RAG:} Top-5 semantically retrieved chunks are injected into the
+          prompt as context.  The model is instructed to answer \emph{only} from
+          these passages.
+    \item \textbf{LLM-only:} The same model answers from its internal parametric
+          knowledge only --- no retrieval.
+\end{itemize}
+
+\subsection{Query Design}
+
+We defined 10 Arabic questions covering direct, indirect, and comparative
+question types at varying difficulty levels:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c l l l}
+\toprule
+\textbf{\#} & \textbf{Query (translated)} & \textbf{Type} & \textbf{Difficulty} \\
+\midrule
+1  & Divisions of knowledge              & Direct      & Easy   \\
+2  & Definition of human civilisation    & Direct      & Medium \\
+3  & Climate's effect on peoples' morals & Indirect    & Hard   \\
+4  & Bedouins vs.\ sedentary people      & Indirect    & Medium \\
+5  & Organic vs.\ military kingship      & Comparative & Hard   \\
+6  & Theory of state formation           & Conceptual  & Hard   \\
+7  & Who is Ibn Khaldun?                 & Factual     & Easy   \\
+8  & What is the Muqaddimah?             & Factual     & Easy   \\
+9  & Role of \emph{asabiyyah} in state formation & Indirect & Medium \\
+10 & Five stages of the state            & Factual     & Medium \\
+\bottomrule
+\end{tabular}
+\caption{The 10 Arabic queries used for evaluation.}
+\label{tab:p4_queries}
+\end{table}
+
+\subsection{Results}
+
+\subsubsection{Classical vs.\ Semantic Retrieval Scores}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c c c}
+\toprule
+\textbf{Query \#} & \textbf{TF-IDF Top-1 Score} & \textbf{Semantic Top-1 Score} \\
+\midrule
+Q1  & 0.2310 & 0.8923 \\
+Q2  & 0.2610 & 0.8787 \\
+Q3  & 0.1766 & 0.8516 \\
+Q4  & 0.2520 & 0.8826 \\
+Q5  & 0.2984 & 0.8615 \\
+Q6  & 0.3170 & 0.9127 \\
+Q7  & 0.3673 & 0.8880 \\
+Q8  & 0.4723 & 0.8771 \\
+Q9  & 0.2249 & 0.8965 \\
+Q10 & 0.2236 & 0.8693 \\
+\midrule
+\textbf{Mean} & \textbf{0.2824} & \textbf{0.8810} \\
+\bottomrule
+\end{tabular}
+\caption{Top-1 retrieval scores: TF-IDF vs.\ semantic (cosine similarity).}
+\label{tab:p4_retrieval}
+\end{table}
+
+Semantic search consistently outperforms TF-IDF by a wide margin.
+The mean semantic top-1 score (\textbf{0.8810}) is more than $3\times$ the mean
+TF-IDF score (\textbf{0.2824}).  The gap is especially large for indirect and
+conceptual queries (Q3, Q9, Q10) where the answer uses different surface words
+than the question.
+
+\subsubsection{RAG vs.\ LLM-Only Generation}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c l c}
+\toprule
+\textbf{Q\#} & \textbf{Query (abridged)} & \textbf{Gen.\ Time (s)} \\
+\midrule
+1  & Divisions of knowledge         & 186.1 \\
+2  & Definition of civilisation     & 219.6 \\
+3  & Climate and morals             & 243.5 \\
+4  & Bedouins vs.\ sedentary        & 145.5 \\
+5  & Organic vs.\ military kingship & 166.0 \\
+6  & State formation                & 207.6 \\
+7  & Who is Ibn Khaldun?            & 108.6 \\
+8  & What is the Muqaddimah?        & 151.9 \\
+9  & Role of \emph{asabiyyah}       & 152.5 \\
+10 & Five stages of the state       & 185.2 \\
+\midrule
+\multicolumn{2}{l}{\textbf{Mean}} & \textbf{176.7} \\
+\bottomrule
+\end{tabular}
+\caption{Generation time per query pair (RAG + LLM-only combined).}
+\label{tab:p4_times}
+\end{table}
+
+\subsection{Qualitative Analysis: RAG vs.\ LLM-Only}
+
+For each of the 10 questions, we compared the RAG answer (with top-5 retrieved
+context) against the LLM-only answer (no retrieval).  Key observations:
+
+\begin{enumerate}
+    \item \textbf{RAG answers are more grounded.}
+          The RAG model cites specific concepts from the Muqaddimah (e.g.,
+          ``\emph{al-umran}'' as the study of human society, the role of
+          \emph{asabiyyah} in state formation).  The LLM-only model invents
+          plausible-sounding but often \emph{factually wrong} details --- for
+          example, listing ``physics'' as one of Ibn Khaldun's divisions of
+          knowledge, or giving incorrect birth dates.
+
+    \item \textbf{LLM-only hallucinations are severe for a 1.5\,B model.}
+          Without retrieval, the model produced Chinese characters mid-sentence,
+          attributed incorrect books to Ibn Khaldun (e.g., ``al-Tabaqat''),
+          and gave wildly wrong dates (965--1029 instead of 1332--1406).
+          RAG eliminates most of these errors by anchoring the answer in
+          real text.
+
+    \item \textbf{RAG struggles with hard comparative questions.}
+          For Q5 (organic vs.\ military kingship) and Q10 (five stages of the
+          state), the retrieved passages did not contain a clean, direct answer,
+          so the RAG model's output was rambling and repetitive.  This is a
+          retrieval quality problem, not a generation problem.
+
+    \item \textbf{Both modes produce fluent Arabic.}
+          The Qwen model handles Arabic well overall.  The main quality
+          difference is \emph{factual accuracy}, not language fluency.
+\end{enumerate}
+
+\subsection{TF-IDF vs.\ Semantic Search: Detailed Comparison}
+
+\begin{itemize}
+    \item \textbf{TF-IDF} matches \emph{exact surface words}.  It does well when
+          the query contains distinctive keywords (Q8, ``\arb{المقدمة}'', scored 0.47),
+          but fails when the answer uses synonyms or paraphrases.
+
+    \item \textbf{Semantic search} matches \emph{meaning}.  Its top-1 scores are
+          consistently $\geq 0.85$, even for indirect questions like Q3
+          (``climate and morals'') where TF-IDF scores only 0.18.
+
+    \item The semantic retriever uses \texttt{multilingual-e5-small}
+          (384-dimensional embeddings), which is fast to encode ($\sim$23\,s for
+          10\,946 passages on GPU) and produces normalised vectors suitable
+          for exact inner-product search via FAISS.
+\end{itemize}
+
+\subsection{Summary and Key Takeaways}
+
+\begin{enumerate}
+    \item \textbf{Semantic retrieval dominates classical retrieval for Arabic.}
+          A mean top-1 score of 0.88 vs.\ 0.28 --- the dense embeddings
+          capture meaning far better than TF-IDF on morphologically rich Arabic.
+
+    \item \textbf{RAG dramatically reduces hallucination.}
+          For a small 1.5\,B-parameter model, retrieval is not optional ---
+          it is essential.  Without it, the model fabricates facts, mixes
+          languages, and gives wrong dates.
+
+    \item \textbf{Retrieval quality is the bottleneck.}
+          When the FAISS index returns the right passages, the LLM generates
+          good answers.  When it does not (hard comparative questions), the
+          LLM struggles regardless.  Future work should focus on better
+          chunking, hybrid retrieval (TF-IDF + dense), and re-ranking.
+
+    \item \textbf{Arabic NLP needs more attention.}
+          OCR artefacts in the source text (the Internet Archive scan has
+          character-level noise) hurt both retrieval and generation.
+          Cleaner corpora and Arabic-native embedding models would help.
 \end{enumerate}
 
 \end{document}
