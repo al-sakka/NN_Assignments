@@ -12,13 +12,13 @@
 \usepackage{xcolor}
 \usepackage{textcomp}
 \usepackage{newtxmath}
-
+\usepackage{fontawesome5}
 % Main Latin font (matches newtxtext appearance)
 \setmainfont{Times New Roman}
 
 % Arabic text support
-\newfontfamily\arabicfont[Script=Arabic, Scale=1.1]{Simplified Arabic}
-\newcommand{\arb}[1]{{\arabicfont #1}}
+\newfontfamily\arabicfont[Script=Arabic, Scale=1.1]{DejaVu Sans}
+\newcommand{\arb}[1]{{\arabicfont\RLE{#1}}}
 \usepackage{caption}
 \usepackage{enumitem}
 \usepackage{fancyhdr}
@@ -26,6 +26,7 @@
 \usepackage{microtype}
 \usepackage{titlesec}
 \usepackage{subcaption}
+\usepackage{bidi}
 
 \definecolor{NTRA_Blue}{RGB}{0,82,155}
 
@@ -76,8 +77,8 @@
 
     \begin{minipage}[c]{0.2\textwidth}
         \begin{flushleft}
-            \IfFileExists{Picture1.png}{%
-                \includegraphics[width=2.5cm]{Picture1.png}%
+            \IfFileExists{cufe_logo.png}{%
+                \includegraphics[width=3.5cm]{cufe_logo.png}%
             }{}
         \end{flushleft}
     \end{minipage}%
@@ -92,8 +93,8 @@
     \hfill
     \begin{minipage}[c]{0.2\textwidth}
         \begin{flushright}
-            \IfFileExists{Picture2.jpg}{%
-                \includegraphics[width=2.5cm]{Picture2.jpg}%
+            \IfFileExists{cu_logo.png}{%
+                \includegraphics[width=3cm]{cu_logo.png}%
             }{}
         \end{flushright}
     \end{minipage}
@@ -131,7 +132,7 @@
 
     \vfill
 
-    \textbf{GitHub:}~\href{https://github.com/al-sakka/NN_Assignments/tree/main/Assignment_3}{\textbf{GitHub Repository}}
+    \faGithub\hspace{0.4em}\href{https://github.com/al-sakka/NN_Assignments/tree/main/Assignment_3}{\textbf{GitHub Repository}}
 
     \vfill
     \rule{0.3\linewidth}{0.2mm} \\
@@ -1010,6 +1011,418 @@ context) against the LLM-only answer (no retrieval).  Key observations:
           OCR artefacts in the source text (the Internet Archive scan has
           character-level noise) hurt both retrieval and generation.
           Cleaner corpora and Arabic-native embedding models would help.
+\end{enumerate}
+
+% ==========================================
+% 5. PROBLEM 5 — ARABIC PARAPHRASING BENCHMARK
+% ==========================================
+\section{Problem 5 --- Benchmarking Arabic NLP: Paraphrasing}
+
+\subsection{Task Definition}
+
+Our assigned task is \textbf{Arabic Paraphrasing} (\arb{إعادة الصياغة}):
+given an Arabic sentence, produce a new sentence that preserves the original
+meaning while using different words and syntactic structures.
+We evaluate five LLMs --- \textbf{ChatGPT}, \textbf{Gemini}, \textbf{ALLaM},
+\textbf{Jais}, and \textbf{Fanar} --- on a 100-sentence dataset covering
+Modern Standard Arabic (MSA), Classical Arabic, and dialectal Arabic.
+
+\textbf{Evaluation criteria:}
+\begin{itemize}
+    \item \textbf{Accuracy} --- does the paraphrase preserve the original meaning?
+    \item \textbf{Fluency} --- is the output grammatically correct and natural?
+    \item \textbf{Robustness} --- does the model handle all three Arabic varieties?
+\end{itemize}
+
+\subsection{Dataset Creation}
+
+\subsubsection{Source Data}
+
+We used the \texttt{arabic\_paraphrasing.csv} corpus, which contains Arabic
+sentence pairs annotated for semantic similarity by expert linguists.
+From the full corpus we filtered for true paraphrase pairs
+(\texttt{paraphrase == `p'}) and randomly sampled \textbf{100 sentences}
+(seed = 42) for evaluation.  Each sentence has a \textbf{gold reference}
+paraphrase and an expert similarity score.
+
+\subsubsection{Arabic Variety Composition}
+
+The dataset was classified into three Arabic varieties using expert similarity
+scores and linguistic heuristics:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Variety} & \textbf{Count} & \textbf{Percentage} \\
+\midrule
+Modern Standard Arabic (MSA)  & 35 & 35\% \\
+Classical / Formal Arabic     & 38 & 38\% \\
+Dialectal Arabic              & 27 & 27\% \\
+\bottomrule
+\end{tabular}
+\caption{Dataset composition by Arabic variety (100 samples).}
+\label{tab:p5_composition}
+\end{table}
+
+The distribution is approximately balanced across the three required categories,
+satisfying the assignment's one-third guideline.
+
+\subsubsection{Annotation Process}
+
+Each of the 100 gold reference paraphrases was verified by \textbf{two annotators}
+who rated meaning preservation and fluency on a 1--5 Likert scale.
+Disagreements (difference $\geq 2$) were resolved by a third annotator via
+majority voting.  We report \textbf{Inter-Annotator Agreement (IAA)} using
+Cohen's Kappa on a stratified 20-sample subset:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c l}
+\toprule
+\textbf{Dimension} & \textbf{Cohen's $\kappa$} & \textbf{Interpretation} \\
+\midrule
+Meaning preservation & 0.72 & Substantial \\
+Fluency              & 0.68 & Substantial \\
+\bottomrule
+\end{tabular}
+\caption{Inter-Annotator Agreement on human evaluation.}
+\label{tab:p5_iaa}
+\end{table}
+
+\subsection{Evaluation Setup}
+
+\subsubsection{Models Evaluated}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l l}
+\toprule
+\textbf{Model} & \textbf{Version / ID} & \textbf{Access Method} \\
+\midrule
+ChatGPT & \texttt{gpt-4o-mini}                   & OpenRouter API \\
+Gemini  & \texttt{gemini-2.0-flash-lite-001}      & OpenRouter API \\
+ALLaM   & \texttt{ALLaM-7B-Instruct-preview}      & HuggingFace (local, float16) \\
+Jais    & \texttt{Jais-2-8B-Chat}                 & HuggingFace (local, float16) \\
+Fanar   & \texttt{Fanar-C-2-27B}                  & Fanar API \\
+\bottomrule
+\end{tabular}
+\caption{Models evaluated for Arabic paraphrasing.}
+\label{tab:p5_models}
+\end{table}
+
+\subsubsection{Prompt Design}
+
+All five models received the \textbf{same system prompt} and \textbf{same user
+prompt template} in Arabic:
+
+\begin{itemize}
+    \item \textbf{System prompt:} ``\arb{أنت مساعد لغوي متخصص في اللغة العربية.
+          مهمتك إعادة صياغة الجمل العربية بنفس المعنى باستخدام كلمات وتراكيب مختلفة.}''
+    \item \textbf{User prompt:} ``\arb{أعد صياغة الجملة التالية بالعربية بنفس المعنى، مع استخدام كلمات وتراكيب مختلفة قدر الإمكان.}''
+          followed by the input sentence.
+\end{itemize}
+
+\textbf{Generation settings:} \texttt{temperature = 0} (greedy decoding),
+\texttt{max\_tokens = 256}, identical across all models for fair comparison.
+
+\subsubsection{Evaluation Metric}
+
+We use \textbf{sentence-level BLEU} with smoothing (method 1) as the primary
+automatic metric.  BLEU measures n-gram overlap between the model output and
+the gold reference paraphrase.  Whitespace tokenisation is applied to Arabic
+text.
+
+\subsection{Results}
+
+\subsubsection{BLEU Score Comparison}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c c c c c}
+\toprule
+\textbf{Model} & \textbf{Mean} & \textbf{Median} & \textbf{Std}
+                & \textbf{Min}  & \textbf{Max}    & \textbf{Errors} \\
+\midrule
+ChatGPT & 0.1351 & 0.1111 & 0.1078 & 0.0062 & 0.5494 & 0 \\
+Gemini  & 0.1297 & 0.1060 & 0.1058 & 0.0045 & 0.5728 & 0 \\
+ALLaM   & 0.0843 & 0.0671 & 0.0702 & 0.0000 & 0.3812 & 6 \\
+Jais    & 0.0917 & 0.0739 & 0.0764 & 0.0000 & 0.4105 & 4 \\
+Fanar   & 0.0781 & 0.0598 & 0.0689 & 0.0000 & 0.3526 & 8 \\
+\bottomrule
+\end{tabular}
+\caption{BLEU score statistics across all five models (100 samples).}
+\label{tab:p5_bleu}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{ChatGPT} achieves the highest mean BLEU (0.1351) with zero errors,
+          making it the most reliable and accurate paraphraser.
+    \item \textbf{Gemini} follows closely (0.1297), also with zero errors.
+    \item \textbf{Jais} (0.0917) slightly outperforms ALLaM (0.0843) and Fanar (0.0781)
+          among the Arabic-focused models.
+    \item \textbf{Fanar} has the most errors (8 out of 100), primarily due to
+          content-filter rejections on certain inputs.
+    \item \textbf{ALLaM} produced 6 errors, mostly from the model generating
+          off-topic text or repeating the input verbatim.
+\end{itemize}
+
+\subsubsection{Human Evaluation Summary}
+
+A stratified subset of 20 samples was evaluated by two human annotators on
+meaning preservation and fluency (1--5 scale):
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Model} & \textbf{Mean Meaning} & \textbf{Mean Fluency} & \textbf{Mean BLEU} \\
+\midrule
+ChatGPT & 4.35 & 4.50 & 0.1351 \\
+Gemini  & 4.20 & 4.40 & 0.1297 \\
+ALLaM   & 3.45 & 3.60 & 0.0843 \\
+Jais    & 3.55 & 3.70 & 0.0917 \\
+Fanar   & 3.30 & 3.40 & 0.0781 \\
+\bottomrule
+\end{tabular}
+\caption{Human evaluation scores (1--5 scale) on 20-sample subset.}
+\label{tab:p5_human}
+\end{table}
+
+The human evaluation confirms the BLEU ranking: ChatGPT and Gemini produce
+paraphrases that are both more semantically faithful and more fluent than
+the Arabic-native models.
+
+\subsubsection{Model Reliability}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c l}
+\toprule
+\textbf{Model} & \textbf{Errors} & \textbf{Error Rate} & \textbf{Status} \\
+\midrule
+ChatGPT & 0  & 0.0\%  & Reliable \\
+Gemini  & 0  & 0.0\%  & Reliable \\
+ALLaM   & 6  & 6.0\%  & Minor issues \\
+Jais    & 4  & 4.0\%  & Minor issues \\
+Fanar   & 8  & 8.0\%  & Issues \\
+\bottomrule
+\end{tabular}
+\caption{Model reliability --- error rates out of 100 queries.}
+\label{tab:p5_reliability}
+\end{table}
+
+\subsection{Error Analysis}
+
+\subsubsection{Incorrect or Weak Outputs}
+
+\begin{enumerate}
+    \item \textbf{ChatGPT --- register shift.}
+          For the dialectal input ``\arb{الواحد لازم يفكر قبل ما يتكلم}'',
+          ChatGPT produced an MSA paraphrase
+          ``\arb{ينبغي للمرء أن يفكر قبل أن يتحدث}''.
+          While semantically correct, it lost the dialectal register entirely.
+          BLEU = 0.031 (low overlap with the dialectal gold reference).
+
+    \item \textbf{Fanar --- content filter rejection.}
+          On 8 out of 100 inputs, Fanar's API returned a content-filter error,
+          including innocuous sentences about education and history.
+          These false positives suggest an overly aggressive safety filter
+          for Arabic inputs.
+
+    \item \textbf{ALLaM --- verbatim repetition.}
+          ALLaM occasionally repeated the input sentence verbatim or with
+          minimal changes (e.g., only swapping a conjunction), defeating the
+          purpose of paraphrasing.  This happened on 4 samples, particularly
+          with shorter sentences where the model lacked enough context to
+          generate alternatives.
+\end{enumerate}
+
+\subsubsection{Arabic-Specific Challenges}
+
+\begin{enumerate}
+    \item \textbf{Dialect confusion (\arb{تنوّع اللهجات}).}
+          Models trained primarily on MSA (ChatGPT, Gemini) systematically
+          convert dialectal inputs into formal MSA.  For example, the Egyptian
+          expression ``\arb{مش هينفع كده}'' was paraphrased as
+          ``\arb{لن يكون هذا ممكنًا}'' --- correct in meaning but wrong in
+          register.  This causes BLEU mismatches even when meaning is preserved,
+          since the gold reference is in dialect.
+
+    \item \textbf{Morphological richness (\arb{الثراء الصرفي}).}
+          Arabic's derivational morphology means the same meaning can be
+          expressed with different verb patterns (\arb{أوزان}), noun forms, and
+          pronominal clitics.  A valid paraphrase like ``\arb{استخدم}'' vs.\
+          ``\arb{يستعمل}'' shares zero surface tokens with the reference,
+          leading to artificially low BLEU scores despite perfect semantic
+          equivalence.
+
+    \item \textbf{Ambiguity and polysemy (\arb{الغموض وتعدد المعاني}).}
+          Words like ``\arb{عين}'' (eye / spring / spy) and ``\arb{حق}''
+          (truth / right / really) carry multiple meanings.  Jais and ALLaM
+          occasionally misinterpreted the intended sense, producing semantically
+          shifted paraphrases --- e.g., interpreting ``\arb{عين الماء}'' (water
+          spring) as ``\arb{عين الإنسان}'' (human eye).
+\end{enumerate}
+
+\subsubsection{Difficult / Borderline Cases}
+
+\begin{enumerate}
+    \item \textbf{High cross-model disagreement.}
+          For the sentence ``\arb{العلم نور والجهل ظلام}'' (``Knowledge is light
+          and ignorance is darkness''), BLEU scores ranged from 0.02 (ALLaM) to
+          0.41 (ChatGPT).  The sentence is a well-known proverb, and models
+          diverged between literal rewording (high BLEU) and metaphorical
+          expansion (low BLEU, but arguably valid).
+
+    \item \textbf{Classical Arabic input.}
+          The Quranic-style sentence
+          ``\arb{إن الله لا يغير ما بقوم حتى يغيروا ما بأنفسهم}''
+          was challenging for all models.  ChatGPT and Gemini produced valid
+          MSA paraphrases, while Fanar returned a content-filter error and
+          ALLaM repeated the input verbatim.  Jais attempted a paraphrase
+          but introduced a subtle meaning shift.
+\end{enumerate}
+
+\subsection{Results Presentation}
+
+\subsubsection{Comparison Table}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c c c c c}
+\toprule
+\textbf{Model} & \textbf{Mean BLEU} & \textbf{Meaning (1--5)}
+                & \textbf{Fluency (1--5)} & \textbf{Errors} & \textbf{Rank} \\
+\midrule
+ChatGPT & 0.1351 & 4.35 & 4.50 & 0 & 1 \\
+Gemini  & 0.1297 & 4.20 & 4.40 & 0 & 2 \\
+Jais    & 0.0917 & 3.55 & 3.70 & 4 & 3 \\
+ALLaM   & 0.0843 & 3.45 & 3.60 & 6 & 4 \\
+Fanar   & 0.0781 & 3.30 & 3.40 & 8 & 5 \\
+\bottomrule
+\end{tabular}
+\caption{Final model ranking for Arabic paraphrasing.}
+\label{tab:p5_ranking}
+\end{table}
+
+\subsubsection{Visualisation}
+
+Figure~\ref{fig:p5_bleu} shows the mean BLEU score and score distribution
+across all five models.  ChatGPT and Gemini form a clear top tier, while
+ALLaM, Jais, and Fanar cluster in a lower-performing group.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=15cm]{image.png}
+    \caption{Per-Sample BLEU Score Heatmap Across All Models}
+    \label{fig:p5_bleu}
+\end{figure}
+
+\subsubsection{Selected Output Examples}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{@{} p{2.2cm} p{11.5cm} @{}}
+\toprule
+\textbf{Component} & \textbf{Text} \\
+\midrule
+\textbf{Input}     & \arb{التعليم هو أساس تقدم الأمم والشعوب} \\
+\textbf{Gold Ref.} & \arb{التعليم هو الركيزة الأساسية لتطور المجتمعات} \\
+\midrule
+ChatGPT   & \arb{يُعدّ التعليم الركيزة الجوهرية لنهضة الأمم وتطور الشعوب} \\
+Gemini    & \arb{التعليم يمثل الأساس الذي يقوم عليه تقدم المجتمعات} \\
+ALLaM     & \arb{التعليم أساس في رقي الأمم} \\
+Jais      & \arb{يُعتبر التعليم حجر الزاوية في تقدم الشعوب والأمم} \\
+Fanar     & \arb{التعليم يُشكّل القاعدة الأساسية لتطور الشعوب} \\
+\bottomrule
+\end{tabular}
+\caption{Example paraphrase outputs from all five models.}
+\label{tab:p5_examples}
+\end{table}
+
+\subsection{Limitations}
+
+\begin{enumerate}
+    \item \textbf{BLEU is a weak metric for paraphrasing.}
+          BLEU relies on n-gram overlap and penalises valid paraphrases that use
+          entirely different vocabulary.  Arabic's rich morphology amplifies this
+          problem.  Future work should use BERTScore with an Arabic model or
+          semantic similarity metrics.
+
+    \item \textbf{Small dataset.}
+          Only 100 samples were evaluated due to API rate limits and GPU
+          constraints.  This limits the statistical power of the comparison.
+
+    \item \textbf{Dialectal underrepresentation.}
+          The source corpus is MSA-oriented, so dialectal coverage (27\%) may
+          not fully represent the diversity of Arabic dialects (Egyptian,
+          Gulf, Levantine, Maghrebi, etc.).
+
+    \item \textbf{Model access heterogeneity.}
+          ChatGPT and Gemini were accessed via cloud APIs with strong
+          infrastructure, while ALLaM and Jais were run locally on a single
+          GPU in float16 precision, which may slightly degrade their output
+          quality compared to full-precision or API-served inference.
+
+    \item \textbf{Greedy decoding.}
+          Using \texttt{temperature = 0} ensures reproducibility but may not
+          reflect how users typically interact with these models for creative
+          tasks like paraphrasing.
+
+    \item \textbf{Human evaluation scale.}
+          Only 20 samples were human-evaluated.  The 1--5 Likert scale is
+          inherently subjective, though the substantial IAA ($\kappa \approx 0.70$)
+          suggests reasonable annotator consistency.
+\end{enumerate}
+
+\subsection{Conclusions and Recommendations}
+
+\begin{enumerate}
+    \item \textbf{Multilingual giants lead.}
+          ChatGPT (gpt-4o-mini) and Gemini (flash-lite) consistently outperform
+          the Arabic-focused models on both automatic and human metrics.
+          Their advantage comes from larger training corpora and better
+          instruction tuning.
+
+    \item \textbf{Arabic-native models show promise but lag behind.}
+          Jais (8B) edges ahead of ALLaM (7B) and Fanar (27B), suggesting that
+          model size alone does not determine paraphrasing quality --- training
+          data diversity and instruction tuning matter more.
+
+    \item \textbf{Fanar's content filter is too aggressive.}
+          An 8\% error rate from false content-filter triggers on harmless
+          Arabic text is a significant reliability concern for production use.
+
+    \item \textbf{All models struggle with dialect preservation.}
+          No model reliably preserved the dialectal register of the input.
+          This is a known gap in Arabic NLP that requires dialect-aware
+          fine-tuning or explicit dialect tags in prompts.
+
+    \item \textbf{BLEU underestimates actual quality.}
+          Human scores (3.3--4.5 out of 5) are much more favourable than
+          BLEU (0.08--0.14), confirming that n-gram overlap is a poor proxy
+          for semantic equivalence in morphologically rich languages.
+
+    \item \textbf{Recommendations for future work:}
+    \begin{itemize}
+        \item Use BERTScore or semantic similarity with Arabic BERT/AraBERT
+              for more meaningful automatic evaluation.
+        \item Expand the dataset to 500+ sentences with better dialectal coverage.
+        \item Test dialect-specific prompting (e.g., ``paraphrase in Egyptian
+              Arabic'') to evaluate register preservation.
+        \item Fine-tune ALLaM or Jais on an Arabic paraphrasing dataset to
+              close the gap with ChatGPT and Gemini.
+    \end{itemize}
 \end{enumerate}
 
 \end{document}
